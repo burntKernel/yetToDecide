@@ -835,23 +835,39 @@
             });
         });
 
+        // ----------------------------------------------------------------------
+        // SLIDER FILL HELPER — updates CSS custom property so the track shows
+        // a filled left-side gradient matching the thumb position.
+        // ----------------------------------------------------------------------
+        function updateSliderFill(slider) {
+            const min = parseFloat(slider.min);
+            const max = parseFloat(slider.max);
+            const val = parseFloat(slider.value);
+            const pct = ((val - min) / (max - min)) * 100;
+            slider.style.setProperty('--fill', `${pct}%`);
+        }
+
         // Sliders & Controls
         const frpSlider = document.getElementById('frpSlider');
         if (frpSlider) {
+            updateSliderFill(frpSlider); // init
             frpSlider.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
                 appState.filters.minFrp = val;
                 document.getElementById('frpSliderVal').textContent = `${val} MW`;
+                updateSliderFill(e.target);
                 applyFilters();
             });
         }
 
         const confSlider = document.getElementById('confSlider');
         if (confSlider) {
+            updateSliderFill(confSlider); // init
             confSlider.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
                 appState.filters.minConfidence = val;
                 document.getElementById('confSliderVal').textContent = `${Math.round(val * 100)}%`;
+                updateSliderFill(e.target);
                 applyFilters();
             });
         }
@@ -870,9 +886,9 @@
             appState.filters = { search: '', classification: 'ALL', minFrp: 0, minConfidence: 0.5, industrialOnly: false, recurrence: 'all' };
             if (searchInput) searchInput.value = '';
             if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
-            if (frpSlider) frpSlider.value = 0;
+            if (frpSlider) { frpSlider.value = 0; updateSliderFill(frpSlider); }
             document.getElementById('frpSliderVal').textContent = '0 MW';
-            if (confSlider) confSlider.value = 0.5;
+            if (confSlider) { confSlider.value = 0.5; updateSliderFill(confSlider); }
             document.getElementById('confSliderVal').textContent = '50%';
             document.getElementById('chkIndustrialOnly').checked = false;
             document.getElementById('selectRecurrence').value = 'all';
