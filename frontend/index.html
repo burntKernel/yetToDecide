@@ -139,6 +139,23 @@
                 </div>
             </div>
 
+            <!-- Basemap Mode Toggle (Street / Satellite) -->
+            <div id="basemapToggleGroup"
+                 class="flex bg-brand-dark border border-brand-border rounded-lg p-0.5 shrink-0 items-center">
+                <button id="btnToggleStreet" data-tile="street"
+                        class="basemap-toggle-btn active flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all bg-brand-panel text-white shadow-sm"
+                        title="Street Map View">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-orange-500"></i>
+                    <span>Street</span>
+                </button>
+                <button id="btnToggleSatellite" data-tile="sat"
+                        class="basemap-toggle-btn flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all text-slate-400 hover:text-white"
+                        title="Satellite Imagery View">
+                    <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                    <span>Satellite</span>
+                </button>
+            </div>
+
             <!-- View Switcher -->
             <div class="flex bg-brand-dark border border-brand-border rounded-lg p-0.5">
                 <button id="tabViewMap" data-view="map"
@@ -255,24 +272,6 @@
                     </div>
                 </div>
 
-                <!-- Basemap -->
-                <div class="filter-section">
-                    <div class="filter-section-label">
-                        <i data-lucide="layers" class="w-3 h-3 text-orange-500"></i>
-                        <span>Basemap Cartography</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <button data-tile="dark" class="tile-btn active">
-                            <span class="tile-swatch" style="background:#191a1a;"></span> Dark
-                        </button>
-                        <button data-tile="sat" class="tile-btn">
-                            <span class="tile-swatch" style="background:linear-gradient(135deg,#1b3d2b,#0d2b1f);"></span> Satellite
-                        </button>
-                        <button data-tile="street" class="tile-btn">
-                            <span class="tile-swatch" style="background:linear-gradient(135deg,#3b4b5e,#263547);"></span> Street
-                        </button>
-                    </div>
-                </div>
 
                 <!-- Overlay Toggles -->
                 <div class="filter-section" style="border-bottom:none;">
@@ -330,21 +329,60 @@
             <div id="viewMapContainer" class="view-panel active absolute inset-0">
                 <div id="map" class="w-full h-full bg-[#060911]"></div>
 
-                <!-- Map HUD -->
-                <div class="absolute bottom-4 left-4 z-10 flex gap-2.5 pointer-events-none">
-                    <div class="pointer-events-auto flex items-center gap-2 bg-brand-header/90 backdrop-blur border border-brand-border rounded-lg px-3 py-1.5 text-[11px] text-slate-400 font-mono">
-                        <i data-lucide="crosshair" class="w-3 h-3"></i>
-                        <span id="coordsText">20.5937° N, 78.9629° E</span>
+                <!-- Floating Basemap Cartography Dropdown -->
+                <div class="absolute top-4 right-4 z-20 flex flex-col items-end">
+                    <button id="btnBasemapDropdown"
+                            class="flex items-center gap-2 bg-brand-header/90 hover:bg-brand-panel hover:text-white backdrop-blur border border-brand-border hover:border-orange-500/50 rounded-lg px-3 py-2 text-[12px] text-slate-200 font-medium shadow-lg transition-all active:scale-95 group"
+                            title="Basemap Cartography">
+                        <i data-lucide="layers" class="w-4 h-4 text-orange-500 group-hover:rotate-12 transition-transform"></i>
+                        <span id="activeBasemapLabel" class="font-medium">Street View</span>
+                        <i data-lucide="chevron-down" id="basemapChevron" class="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform duration-200"></i>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="basemapDropdownMenu"
+                         class="hidden mt-1.5 w-48 bg-brand-header/95 backdrop-blur-md border border-brand-border rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-30 transition-all duration-200">
+                        <div class="px-2.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-brand-border/60">
+                            Basemap Cartography
+                        </div>
+                        <button data-tile="street"
+                                class="basemap-option-btn active flex items-center justify-between w-full px-2.5 py-2 rounded-lg text-left text-[12px] font-medium transition-all text-white bg-brand-panel border border-brand-borderLight/60">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-4 h-4 rounded-md shadow-sm shrink-0" style="background:linear-gradient(135deg,#3b4b5e,#263547);"></span>
+                                <span>Street View</span>
+                            </div>
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-orange-500"></i>
+                        </button>
+                        <button data-tile="sat"
+                                class="basemap-option-btn flex items-center justify-between w-full px-2.5 py-2 rounded-lg text-left text-[12px] font-medium transition-all text-slate-300 hover:text-white hover:bg-brand-panel/60 border border-transparent">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-4 h-4 rounded-md shadow-sm shrink-0" style="background:linear-gradient(135deg,#1b3d2b,#0d2b1f);"></span>
+                                <span>Satellite View</span>
+                            </div>
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-orange-500 hidden"></i>
+                        </button>
                     </div>
-                    <div class="pointer-events-auto flex items-center gap-3 bg-brand-header/90 backdrop-blur border border-brand-border rounded-lg px-3 py-1.5 text-[11px] text-slate-400">
-                        <span class="flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-orange-600"></span> Industrial Flare
+                </div>
+
+                <!-- Map HUD -->
+                <div class="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-2.5 pointer-events-none">
+                    <div class="pointer-events-auto flex items-center gap-2 bg-brand-header/90 backdrop-blur border border-brand-border rounded-lg px-3 py-1.5 text-[11px] text-slate-300 font-mono shadow-md">
+                        <i data-lucide="crosshair" class="w-3.5 h-3.5 text-orange-500"></i>
+                        <span id="coordsText">Zoom 5 | 22.5937° N, 78.9629° E</span>
+                    </div>
+                    <button id="btnFitBounds" class="pointer-events-auto flex items-center gap-1.5 bg-brand-header/90 hover:bg-brand-panel hover:text-white backdrop-blur border border-brand-border hover:border-orange-500/50 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-medium transition-all shadow-md active:scale-95" title="Fit all hotspots in view">
+                        <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-orange-500"></i>
+                        <span>Fit View</span>
+                    </button>
+                    <div class="pointer-events-auto flex items-center gap-3 bg-brand-header/90 backdrop-blur border border-brand-border rounded-lg px-3 py-1.5 text-[11px] text-slate-400 shadow-md">
+                        <span class="flex items-center gap-1.5 text-slate-200">
+                            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]"></span> Industrial Flare Pin
                         </span>
-                        <span class="flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-700"></span> Natural Fire
+                        <span class="flex items-center gap-1.5 text-slate-200">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Natural Wildfire Pin
                         </span>
-                        <span class="flex items-center gap-1.5 text-cyan-600">
-                            <i data-lucide="factory" class="w-3 h-3"></i> Facility Node
+                        <span class="flex items-center gap-1.5 text-cyan-400">
+                            <i data-lucide="factory" class="w-3.5 h-3.5"></i> Facility Node
                         </span>
                     </div>
                 </div>
@@ -433,7 +471,7 @@
                     <i data-lucide="radar" class="w-5 h-5"></i>
                 </div>
                 <h4 class="text-sm font-semibold text-slate-300">No Event Selected</h4>
-                <p class="text-[11px] leading-relaxed text-slate-500">Click on any map marker or table row to view model rationale, SHAP feature weights, and satellite observations.</p>
+                <p class="text-[11px] leading-relaxed text-slate-500">Click on any map marker or table row to view attribution certainty, spatial proximity context, and satellite observations.</p>
             </div>
 
             <!-- Inspector Content -->
@@ -458,102 +496,42 @@
                     </div>
                 </div>
 
-                <!-- SHAP Feature Importance -->
-                <div class="inspector-block-wrap">
-                    <div class="inspector-block-title">
-                        <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i> SHAP Feature Attribution
-                    </div>
-                    <!-- 2-column grid: each cell = one SHAP feature -->
-                    <div class="shap-ring-grid">
-
-                        <!-- Industrial Proximity 38% — circumference 100.53 (r=16), fill = 38.2 -->
-                        <div class="shap-ring-item">
-                            <div class="shap-ring-wrap">
-                                <svg viewBox="0 0 40 40" class="shap-ring-svg">
-                                    <circle class="shap-ring-track" cx="20" cy="20" r="16"/>
-                                    <circle class="shap-ring-fill" cx="20" cy="20" r="16"
-                                            stroke="#ea580c"
-                                            stroke-dasharray="38.2 62.33"/>
-                                </svg>
-                                <span class="shap-ring-pct" style="color:#ea580c;">38%</span>
-                            </div>
-                            <span class="shap-ring-label">Industrial<br>Proximity</span>
-                        </div>
-
-                        <!-- 30-Day Recurrence 32% — fill = 32.17 -->
-                        <div class="shap-ring-item">
-                            <div class="shap-ring-wrap">
-                                <svg viewBox="0 0 40 40" class="shap-ring-svg">
-                                    <circle class="shap-ring-track" cx="20" cy="20" r="16"/>
-                                    <circle class="shap-ring-fill" cx="20" cy="20" r="16"
-                                            stroke="#d97706"
-                                            stroke-dasharray="32.17 68.36"/>
-                                </svg>
-                                <span class="shap-ring-pct" style="color:#d97706;">32%</span>
-                            </div>
-                            <span class="shap-ring-label">30-Day<br>Recurrence</span>
-                        </div>
-
-                        <!-- FRP Radiative 18% — fill = 18.10 -->
-                        <div class="shap-ring-item">
-                            <div class="shap-ring-wrap">
-                                <svg viewBox="0 0 40 40" class="shap-ring-svg">
-                                    <circle class="shap-ring-track" cx="20" cy="20" r="16"/>
-                                    <circle class="shap-ring-fill" cx="20" cy="20" r="16"
-                                            stroke="#e11d48"
-                                            stroke-dasharray="18.10 82.43"/>
-                                </svg>
-                                <span class="shap-ring-pct" style="color:#e11d48;">18%</span>
-                            </div>
-                            <span class="shap-ring-label">FRP<br>Intensity</span>
-                        </div>
-
-                        <!-- Land Cover 12% — fill = 12.06 -->
-                        <div class="shap-ring-item">
-                            <div class="shap-ring-wrap">
-                                <svg viewBox="0 0 40 40" class="shap-ring-svg">
-                                    <circle class="shap-ring-track" cx="20" cy="20" r="16"/>
-                                    <circle class="shap-ring-fill" cx="20" cy="20" r="16"
-                                            stroke="#059669"
-                                            stroke-dasharray="12.06 88.47"/>
-                                </svg>
-                                <span class="shap-ring-pct" style="color:#059669;">12%</span>
-                            </div>
-                            <span class="shap-ring-label">Land Cover<br>Profile</span>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Evidence List -->
-                <div class="inspector-block-wrap">
-                    <div class="inspector-block-title">
-                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Decision Evidence Rationale
-                    </div>
-                    <ul id="evidenceList" class="flex flex-col gap-1.5"></ul>
-                </div>
-
                 <!-- Spatial Context -->
                 <div class="inspector-block-wrap">
-                    <div class="inspector-block-title">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Spatial Proximity Context
+                    <div class="inspector-block-title flex items-center justify-between">
+                        <span class="flex items-center gap-1.5 font-semibold text-[12px] text-slate-200">
+                            <i data-lucide="navigation" class="w-3.5 h-3.5 text-cyan-400"></i> Spatial Proximity Context
+                        </span>
+                        <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wide">GIS Proximity</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-2 gap-2.5 mt-2">
                         <div class="spec-card spec-card-cyan">
-                            <span class="spec-card-label">Nearest Facility</span>
-                            <strong id="detFacility" class="spec-card-val text-cyan-600 truncate">--</strong>
+                            <div class="spec-card-header">
+                                <i data-lucide="factory" class="w-3 h-3 text-cyan-400 shrink-0"></i>
+                                <span class="spec-card-label">Nearest Facility</span>
+                            </div>
+                            <strong id="detFacility" class="spec-card-val text-cyan-400 truncate" title="Facility Name">--</strong>
                         </div>
-                        <div class="spec-card spec-card-white">
-                            <span class="spec-card-label">Distance</span>
-                            <strong id="detDistance" class="spec-card-val text-white">--</strong>
+                        <div class="spec-card spec-card-amber">
+                            <div class="spec-card-header">
+                                <i data-lucide="ruler" class="w-3 h-3 text-amber-400 shrink-0"></i>
+                                <span class="spec-card-label">Distance</span>
+                            </div>
+                            <strong id="detDistance" class="spec-card-val text-white font-mono">--</strong>
                         </div>
-                        <div class="spec-card spec-card-white">
-                            <span class="spec-card-label">Land Cover</span>
-                            <strong id="detLandCover" class="spec-card-val text-white truncate">--</strong>
+                        <div class="spec-card spec-card-emerald">
+                            <div class="spec-card-header">
+                                <i data-lucide="trees" class="w-3 h-3 text-emerald-400 shrink-0"></i>
+                                <span class="spec-card-label">Land Cover</span>
+                            </div>
+                            <strong id="detLandCover" class="spec-card-val text-slate-200 truncate" title="Land Cover">--</strong>
                         </div>
                         <div class="spec-card spec-card-orange">
-                            <span class="spec-card-label">30d Recurrence</span>
-                            <strong id="det30dCount" class="spec-card-val text-orange-600">--</strong>
+                            <div class="spec-card-header">
+                                <i data-lucide="activity" class="w-3 h-3 text-orange-400 shrink-0"></i>
+                                <span class="spec-card-label">30d Recurrence</span>
+                            </div>
+                            <strong id="det30dCount" class="spec-card-val text-orange-400 font-mono">--</strong>
                         </div>
                     </div>
                 </div>

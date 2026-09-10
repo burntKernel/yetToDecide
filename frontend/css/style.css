@@ -1,6 +1,5 @@
 /* ==========================================================================
-   ThermaSight AI — Flat UI Stylesheet
-   Solid colors only. No gradients, no glow, no shimmer.
+   ThermaSight AI
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -222,36 +221,32 @@
 .toggle-track input:checked ~ .toggle-thumb { transform: translateX(14px); background: #fff; }
 
 /* --------------------------------------------------------------------------
-   8. TILE BUTTONS (basemap)
+   8. BASEMAP CARTOGRAPHY DROPDOWN
    -------------------------------------------------------------------------- */
-.tile-btn {
+.basemap-option-btn {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 6px 4px;
-    border-radius: 5px;
-    border: 1px solid #1e2942;
-    background: #0e1424;
-    color: #4b5e7a;
-    font-size: 10px;
+    justify-content: space-between;
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+    border: 1px solid transparent;
+    transition: all 0.12s ease;
 }
-.tile-btn:hover { border-color: #2d3d61; color: #94a3b8; background: #121d30; }
-.tile-btn.active {
-    border-color: #ea580c !important;
-    background: #1a1f2e !important;
-    color: #ea580c !important;
+.basemap-option-btn:hover {
+    background: #161e33;
+    color: #f1f5f9;
 }
-
-.tile-swatch {
-    width: 11px;
-    height: 11px;
-    border-radius: 2px;
-    border: 1px solid #243044;
-    flex-shrink: 0;
+.basemap-option-btn.active {
+    background: #1a2238 !important;
+    border-color: rgba(234, 88, 12, 0.4) !important;
+    color: #f1f5f9 !important;
+    font-weight: 600;
 }
 
 /* --------------------------------------------------------------------------
@@ -317,65 +312,247 @@
 .leaflet-control-attribution a { color: #3d4f6a !important; }
 
 /* --------------------------------------------------------------------------
-   12. MAP MARKERS
+   TASK 4 & 5: MAP INTERACTION CURSORS & CONTAINER
+   -------------------------------------------------------------------------- */
+#map {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    outline: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+#map:active,
+.leaflet-dragging,
+.leaflet-dragging #map,
+.leaflet-drag-target {
+    cursor: grabbing !important;
+}
+
+/* --------------------------------------------------------------------------
+   TASK 5: SCALE BAR STYLING (UX IMPROVEMENT)
+   -------------------------------------------------------------------------- */
+.leaflet-control-scale {
+    background: rgba(14, 20, 36, 0.88) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid #1e2942 !important;
+    border-radius: 6px !important;
+    color: #94a3b8 !important;
+    font-size: 10px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    padding: 3px 6px !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
+    margin-bottom: 24px !important;
+    margin-left: 16px !important;
+}
+
+.leaflet-control-scale-line {
+    border: 2px solid #ea580c !important;
+    border-top: none !important;
+    color: #f1f5f9 !important;
+    background: rgba(10, 14, 26, 0.7) !important;
+    padding: 1px 4px !important;
+    font-weight: 600 !important;
+}
+
+/* --------------------------------------------------------------------------
+   TASK 5: ENHANCED TOOLTIPS FOR MARKERS
+   -------------------------------------------------------------------------- */
+.event-marker-tooltip {
+    background: rgba(14, 20, 36, 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid #ea580c !important;
+    border-radius: 6px !important;
+    color: #f1f5f9 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 5px 9px !important;
+    box-shadow: 0 4px 16px rgba(234, 88, 12, 0.25) !important;
+}
+
+.event-marker-tooltip.natural-tooltip {
+    border-color: #10b981 !important;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25) !important;
+}
+
+.event-marker-tooltip::before {
+    border-top-color: #ea580c !important;
+}
+
+.event-marker-tooltip.natural-tooltip::before {
+    border-top-color: #10b981 !important;
+}
+
+.facility-tooltip {
+    background: rgba(10, 19, 36, 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid #06b6d4 !important;
+    border-radius: 6px !important;
+    color: #f1f5f9 !important;
+    font-size: 11px !important;
+    padding: 5px 9px !important;
+    box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3) !important;
+}
+
+.facility-tooltip::before {
+    border-top-color: #06b6d4 !important;
+}
+
+/* --------------------------------------------------------------------------
+   TASK 1 & 2: PIN-POINT LOCATION MARKERS (HIGH PRECISION GIS PINPOINTS)
    -------------------------------------------------------------------------- */
 .custom-map-marker {
     display: flex;
     align-items: center;
     justify-content: center;
+    background: transparent;
+    border: none;
     position: relative;
+    overflow: visible;
 }
 
-.marker-ind {
-    background: #ea580c;
-    border: 2px solid #f8fafc;
-    border-radius: 50%;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    cursor: pointer;
+.pin-marker-container {
     position: relative;
-}
-.marker-ind.marker-pulse::after {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 50%;
-    border: 1.5px solid #ea580c;
-    animation: pingPulse 2s ease-out infinite;
-}
-
-.marker-nat {
-    background: #059669;
-    border: 2px solid #f8fafc;
-    border-radius: 50%;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    cursor: pointer;
-    position: relative;
-}
-.marker-nat.marker-pulse::after {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 50%;
-    border: 1.5px solid #059669;
-    animation: pingPulse 2s ease-out infinite;
-}
-
-.marker-facility {
-    background: #0e1424;
-    border: 1.5px solid #22d3ee;
-    color: #22d3ee;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    cursor: pointer;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: 50% 100%;
 }
 
-@keyframes pingPulse {
-    0%   { transform: scale(1);   opacity: 0.7; }
-    100% { transform: scale(2.4); opacity: 0;   }
+.pin-marker-container:hover {
+    transform: translateY(-4px) scale(1.12);
+    z-index: 1000 !important;
+}
+
+/* Center Anomaly Focal Highlight (Enlarged & Prominent) */
+.pin-marker-container.pin-selected {
+    transform: translateY(-8px) scale(1.35) !important;
+    z-index: 1200 !important;
+}
+
+.pin-marker-container.pin-selected .pin-svg {
+    filter: drop-shadow(0 0 10px rgba(255, 107, 0, 0.95)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7)) !important;
+}
+
+.pin-marker-container.pin-selected.pin-natural .pin-svg {
+    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.95)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7)) !important;
+}
+
+/* Concentric Radar Beacon Wavefront for Center Anomaly */
+.pin-focal-beacon {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #ff6b00;
+    box-shadow: 0 0 16px rgba(255, 107, 0, 0.85);
+    pointer-events: none;
+    animation: focalBeaconPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.pin-selected.pin-natural .pin-focal-beacon {
+    border-color: #10b981;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.85);
+}
+
+@keyframes focalBeaconPing {
+    0%   { transform: translateX(-50%) scale(0.5); opacity: 1; }
+    75%  { transform: translateX(-50%) scale(3.2); opacity: 0.12; }
+    100% { transform: translateX(-50%) scale(3.6); opacity: 0; }
+}
+
+/* Pin Ground Anchor & Radar Pulse */
+.pin-ground-anchor {
+    position: absolute;
+    bottom: 0px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 4px rgba(0,0,0,0.8);
+    pointer-events: none;
+}
+
+.pin-pulse .pin-ground-pulse {
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: groundPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.pin-industrial .pin-ground-pulse {
+    border: 1.5px solid #ff6b00;
+    box-shadow: 0 0 10px rgba(255, 107, 0, 0.6);
+}
+
+.pin-natural .pin-ground-pulse {
+    border: 1.5px solid #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+
+.pin-facility .pin-ground-pulse {
+    border: 1.5px solid #00f0ff;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+@keyframes groundPing {
+    0%   { transform: translateX(-50%) scale(0.6); opacity: 0.9; }
+    80%  { transform: translateX(-50%) scale(2.6); opacity: 0;   }
+    100% { transform: translateX(-50%) scale(2.8); opacity: 0;   }
+}
+
+/* SVG Pin Icon Styling */
+.pin-svg {
+    display: block;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.45));
+}
+
+/* Facility Pin Badge */
+.pin-facility-badge {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Proximity Vector / Tie-line Styling */
+.proximity-vector-line {
+    stroke-dasharray: 6, 6;
+    animation: proximityDash 1.2s linear infinite;
+    filter: drop-shadow(0 0 5px rgba(255, 107, 0, 0.8));
+}
+
+@keyframes proximityDash {
+    to { stroke-dashoffset: -12; }
+}
+
+.proximity-badge-marker {
+    background: rgba(14, 20, 36, 0.92) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid #ff6b00;
+    color: #ffedd5;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -582,35 +759,49 @@
 .shap-bar-emerald { background: #059669; }
 
 /* --------------------------------------------------------------------------
-   21. SPEC CARDS
+   21. SPEC CARDS (SPATIAL PROXIMITY CONTEXT)
    -------------------------------------------------------------------------- */
 .spec-card {
-    background: #0e1424;
-    border: 1px solid #1a2438;
-    border-radius: 7px;
-    padding: 8px 10px;
+    background: rgba(14, 20, 36, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid #1e2942;
+    border-radius: 10px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    transition: border-color 0.12s ease;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: all 0.15s ease;
 }
-.spec-card:hover { border-color: #243044; }
-.spec-card-cyan   { border-left: 2px solid #22d3ee; }
-.spec-card-white  { border-left: 2px solid #334155; }
-.spec-card-orange { border-left: 2px solid #ea580c; }
+.spec-card:hover {
+    border-color: #2e3e64;
+    background: rgba(18, 26, 46, 0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.spec-card-cyan    { border-left: 3px solid #06b6d4; }
+.spec-card-amber   { border-left: 3px solid #f59e0b; }
+.spec-card-emerald { border-left: 3px solid #10b981; }
+.spec-card-orange  { border-left: 3px solid #ea580c; }
 
+.spec-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
 .spec-card-label {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
-    color: #3d4f6a;
+    color: #94a3b8;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.05em;
 }
 .spec-card-val {
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.3;
-    color: #e2e8f0;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+    font-family: 'Space Grotesk', sans-serif;
+    color: #f8fafc;
 }
 
 /* --------------------------------------------------------------------------
@@ -683,25 +874,6 @@
     color: #94a3b8;
 }
 
-/* --------------------------------------------------------------------------
-   24. EVIDENCE LIST
-   -------------------------------------------------------------------------- */
-#evidenceList li {
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    font-size: 11px;
-    color: #64748b;
-    background: #0e1424;
-    padding: 7px 9px;
-    border-radius: 5px;
-    border-left: 2px solid #ea580c;
-    list-style: none;
-    transition: background 0.1s ease;
-}
-#evidenceList li:hover  { background: #111827; color: #94a3b8; }
-#evidenceList li svg    { width: 11px; height: 11px; color: #ea580c; flex-shrink: 0; margin-top: 2px; }
-#evidenceList li span   { line-height: 1.5; }
 
 /* --------------------------------------------------------------------------
    25. TOAST

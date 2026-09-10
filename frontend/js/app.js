@@ -30,8 +30,8 @@
     const MOCK_EVENTS = [
         {
             "event_id": "FIRMS-IND-2025-001",
-            "latitude": 22.3072,
-            "longitude": 73.1812,
+            "latitude": 22.3087,
+            "longitude": 73.1826,
             "acq_date": "2025-05-12",
             "acq_time": "1330",
             "satellite": "VIIRS_SNPP",
@@ -86,8 +86,8 @@
         },
         {
             "event_id": "FIRMS-IND-2025-003",
-            "latitude": 20.8880,
-            "longitude": 85.1511,
+            "latitude": 20.8908,
+            "longitude": 85.1538,
             "acq_date": "2025-05-18",
             "acq_time": "0210",
             "satellite": "VIIRS_SNPP",
@@ -140,8 +140,8 @@
         },
         {
             "event_id": "FIRMS-IND-2025-005",
-            "latitude": 22.4707,
-            "longitude": 69.8378,
+            "latitude": 22.4717,
+            "longitude": 69.8388,
             "acq_date": "2025-06-01",
             "acq_time": "2310",
             "satellite": "VIIRS_SNPP",
@@ -173,7 +173,7 @@
         stats: null,
         selectedEventId: null,
         activeView: 'map',
-        activeTileLayer: 'dark',
+        activeTileLayer: 'street',
         autoSyncInterval: null,
         isLivePolling: true,
         filters: {
@@ -196,6 +196,7 @@
     let markersLayerGroup = null;
     let facilityLayerGroup = null;
     let bufferRingsGroup = null;
+    let proximityVectorLayer = null;
     let charts = {};
 
     // ----------------------------------------------------------------------
@@ -222,19 +223,37 @@
         const mapContainer = document.getElementById('map');
         if (!mapContainer) return;
 
+        // Fully interactive map: smooth mouse scroll zoom, hold-and-drag panning, keyboard navigation
         map = L.map('map', {
             center: DEFAULT_CENTER,
             zoom: DEFAULT_ZOOM,
-            zoomControl: false
+            zoomControl: false,
+            dragging: true,
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            boxZoom: true,
+            keyboard: true,
+            touchZoom: true,
+            wheelDebounceTime: 40,
+            wheelPxPerZoomLevel: 60,
+            tap: true
         });
 
+        // Zoom control at bottom right
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Highly visible CartoDB Dark Matter raster tiles (No watermark, crisp contrast)
-        tileLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 19
+        // Metric scale bar at bottom left (UX Life Improvement)
+        L.control.scale({
+            metric: true,
+            imperial: false,
+            position: 'bottomleft'
+        }).addTo(map);
+
+        // OpenStreetMap (Street View) — DEFAULT MAP
+        tileLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+            detectRetina: true
         });
 
         // Esri World Imagery (Satellite View)
@@ -243,24 +262,37 @@
             maxZoom: 18
         });
 
-        // OpenStreetMap (Street View)
-        tileLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap',
-            maxZoom: 19
-        });
-
-        // Default to Dark Cartography
-        tileLayers.dark.addTo(map);
+        // Street View is the active default base layer
+        tileLayers.street.addTo(map);
 
         bufferRingsGroup = L.layerGroup().addTo(map);
         facilityLayerGroup = L.layerGroup().addTo(map);
         markersLayerGroup = L.layerGroup().addTo(map);
 
-        map.on('mousemove', (e) => {
+        // Dynamic Zoom Level & Coordinate HUD Tracker
+        function updateCoordsHUD(latlng) {
             const coordsText = document.getElementById('coordsText');
-            if (coordsText) {
-                coordsText.textContent = `${e.latlng.lat.toFixed(4)}° N, ${e.latlng.lng.toFixed(4)}° E`;
+            if (!coordsText) return;
+            const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
+            if (latlng) {
+                coordsText.textContent = `Zoom ${zoom} | ${latlng.lat.toFixed(4)}° N, ${latlng.lng.toFixed(4)}° E`;
+            } else if (map) {
+                const center = map.getCenter();
+                coordsText.textContent = `Zoom ${zoom} | ${center.lat.toFixed(4)}° N, ${center.lng.toFixed(4)}° E`;
             }
+        }
+
+        map.on('mousemove', (e) => updateCoordsHUD(e.latlng));
+        map.on('zoomend', () => updateCoordsHUD());
+        updateCoordsHUD();
+
+        // Invalidate size to ensure container dimensions and drag panning are instantly responsive
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+        }, 120);
+
+        window.addEventListener('resize', () => {
+            if (map) map.invalidateSize();
         });
 
         renderIndustrialFacilities();
@@ -273,28 +305,58 @@
 
         if (!appState.layers.industrialNodes) return;
 
-        KNOWN_INDUSTRIAL_HUBS.forEach(hub => {
-            const iconHtml = `<div class="marker-facility" title="${hub.name}"><i data-lucide="factory" style="width:13px;height:13px;"></i></div>`;
+        KNOWN_INDUSTRIAL_HUBS.forEach((hub, idx) => {
+            const iconHtml = `
+                <div class="pin-marker-container pin-facility" title="${hub.name}">
+                    <div class="pin-ground-pulse"></div>
+                    <svg class="pin-svg" width="28" height="36" viewBox="0 0 28 36" fill="none">
+                        <defs>
+                            <linearGradient id="facGrad-${idx}" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#22d3ee"/>
+                                <stop offset="100%" stop-color="#0891b2"/>
+                            </linearGradient>
+                            <filter id="facShadow-${idx}" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.5"/>
+                            </filter>
+                        </defs>
+                        <!-- High precision shield pin anchored at bottom tip (14, 34) -->
+                        <path d="M14 2 L25 7 L25 19 C25 25 14 34 14 34 C14 34 3 25 3 19 L3 7 Z" fill="url(#facGrad-${idx})" stroke="#ffffff" stroke-width="1.6" filter="url(#facShadow-${idx})"/>
+                        <!-- Factory icon glyph in center -->
+                        <path d="M7 20V13l4 2V13l4 2V10l5-2v12H7Z" fill="#0b132b" stroke="#ffffff" stroke-width="0.7"/>
+                    </svg>
+                    <div class="pin-ground-anchor"></div>
+                </div>
+            `;
             const customIcon = L.divIcon({
                 html: iconHtml,
                 className: 'custom-map-marker',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
+                iconSize: [28, 36],
+                iconAnchor: [14, 34],
+                popupAnchor: [0, -36],
+                tooltipAnchor: [0, -36]
             });
 
             const marker = L.marker([hub.lat, hub.lon], { icon: customIcon });
-            marker.bindTooltip(`<strong>${hub.name}</strong><br><span style="color:#00f0ff; font-size:10px;">${hub.type}</span>`, { direction: 'top', offset: [0, -8] });
+            marker.bindTooltip(`
+                <div style="font-weight:700; color:#22d3ee; margin-bottom:2px;">${hub.name}</div>
+                <div style="font-size:10px; color:#cbd5e1;">${hub.type}</div>
+                <div style="font-size:9px; color:#94a3b8; margin-top:2px;">Coordinates: ${hub.lat.toFixed(4)}° N, ${hub.lon.toFixed(4)}° E</div>
+            `, {
+                className: 'facility-tooltip',
+                direction: 'top',
+                offset: [0, -36]
+            });
             facilityLayerGroup.addLayer(marker);
 
             // Buffer Ring (5 km radius)
             if (appState.layers.bufferRings) {
                 const circle = L.circle([hub.lat, hub.lon], {
                     radius: 5000,
-                    color: '#00f0ff',
+                    color: '#06b6d4',
                     weight: 1.5,
                     dashArray: '4, 4',
-                    fillColor: '#00f0ff',
-                    fillOpacity: 0.06
+                    fillColor: '#06b6d4',
+                    fillOpacity: 0.07
                 });
                 bufferRingsGroup.addLayer(circle);
             }
@@ -437,40 +499,107 @@
     }
 
     // ----------------------------------------------------------------------
-    // 6. MAP MARKERS (VIBRANT COLORS & PULSE ANIMATION)
+    // 6. MAP MARKERS (HIGH PRECISION PINPOINT CARTO & TOOLTIPS)
     // ----------------------------------------------------------------------
     function renderMapMarkers() {
         if (!markersLayerGroup) return;
         markersLayerGroup.clearLayers();
 
-        appState.filteredEvents.forEach(event => {
+        appState.filteredEvents.forEach((event, idx) => {
             const isInd = event.classification === 'INDUSTRIAL';
-            const markerClass = isInd ? 'marker-ind' : 'marker-nat';
-            const isPulsing = appState.layers.frpPulse ? 'marker-pulse' : '';
-            const size = Math.min(Math.max(16 + Math.round(event.frp / 6), 18), 32);
+            const isSelected = event.event_id === appState.selectedEventId;
+            const markerTypeClass = isInd ? 'pin-industrial' : 'pin-natural';
+            const isPulsing = appState.layers.frpPulse ? 'pin-pulse' : '';
+            const selectedClass = isSelected ? 'pin-selected' : '';
+            const size = Math.min(Math.max(26 + Math.round(event.frp / 12), 26), 34);
+            const height = Math.round(size * 1.35); // e.g. 28w x 38h
 
-            const html = `<div class="${markerClass} ${isPulsing}" style="width:${size}px;height:${size}px;" title="${event.event_id}"></div>`;
+            const gradId = `heatGrad-${isInd ? 'ind' : 'nat'}-${idx}`;
+            const gradStops = isInd 
+                ? '<stop offset="0%" stop-color="#ff7a00"/><stop offset="100%" stop-color="#dc2626"/>'
+                : '<stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#047857"/>';
+
+            const glyphSvg = isInd
+                ? '<path d="M14 9.5 C14 9.5 16 12 16 14 C16 15.5 15.2 16.5 14 16.5 C12.8 16.5 12 15.5 12 14 C12 12 14 9.5 14 9.5 Z" fill="#ffffff"/>'
+                : '<path d="M14 8 L18 14 H15 L18 18 H10 L13 14 H10 Z M13.5 18 V20 H14.5 V18 Z" fill="#ffffff"/>';
+
+            const focalBeaconHtml = isSelected ? '<div class="pin-focal-beacon"></div>' : '';
+
+            const html = `
+                <div class="pin-marker-container ${markerTypeClass} ${isPulsing} ${selectedClass}" style="width:${size}px;height:${height}px;" title="${event.event_id}">
+                    <div class="pin-ground-pulse"></div>
+                    ${focalBeaconHtml}
+                    <svg class="pin-svg" width="${size}" height="${height}" viewBox="0 0 28 38" fill="none">
+                        <defs>
+                            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                                ${gradStops}
+                            </linearGradient>
+                            <filter id="pinShadow-${idx}" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
+                            </filter>
+                        </defs>
+                        <!-- Teardrop pinpoint anchored at bottom center needle (14, 37) -->
+                        <path d="M14 2 C7.37 2 2 7.37 2 14 C2 23 14 37 14 37 C14 37 26 23 26 14 C26 7.37 20.63 2 14 2 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="1.8" filter="url(#pinShadow-${idx})"/>
+                        <circle cx="14" cy="14" r="8" fill="#0c1222" fill-opacity="0.8" stroke="#ffffff" stroke-width="0.8"/>
+                        ${glyphSvg}
+                        <!-- Center target dot indicator -->
+                        <circle cx="14" cy="14" r="1.5" fill="#ffffff"/>
+                    </svg>
+                    <div class="pin-ground-anchor"></div>
+                </div>
+            `;
+
             const customIcon = L.divIcon({
                 html: html,
                 className: 'custom-map-marker',
-                iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2]
+                iconSize: [size, height],
+                iconAnchor: [size / 2, height - 1], // Exactly at the needle tip!
+                popupAnchor: [0, -height - 2],
+                tooltipAnchor: [0, -height - 2]
             });
 
-            const marker = L.marker([event.latitude, event.longitude], { icon: customIcon });
+            const marker = L.marker([event.latitude, event.longitude], { 
+                icon: customIcon,
+                zIndexOffset: isSelected ? 1200 : 0
+            });
+            marker._eventId = event.event_id;
 
+            // Rich Hover Tooltip (UX Life Improvement)
+            const tooltipHtml = `
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+                    <span class="badge-sm ${isInd ? 'badge-ind' : 'badge-nat'}">${event.classification}</span>
+                    <strong style="color:#ffffff; font-family:monospace; font-size:10px;">${event.event_id}</strong>
+                </div>
+                <div style="font-size:12px; font-weight:700; color:#ffedd5; margin-bottom:2px;">
+                    ${event.frp} MW FRP &bull; <span style="font-weight:400; color:#94a3b8;">${event.brightness_temperature || 350} K</span>
+                </div>
+                <div style="font-size:10px; color:#cbd5e1;">
+                    ${event.nearest_industrial_facility ? `${event.nearest_industrial_facility} (${event.industrial_distance_km} km)` : event.land_cover}
+                </div>
+                <div style="font-size:9px; color:#64748b; margin-top:2px;">Click to inspect attribution</div>
+            `;
+            marker.bindTooltip(tooltipHtml, {
+                className: `event-marker-tooltip ${isInd ? '' : 'natural-tooltip'}`,
+                direction: 'top',
+                offset: [0, -height]
+            });
+
+            // Interactive Leaflet Popup
             const popupContent = `
-                <div style="padding:6px; min-width:170px;">
+                <div style="padding:8px 10px; min-width:185px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                         <span class="badge-sm ${isInd ? 'badge-ind' : 'badge-nat'}">${event.classification}</span>
                         <span style="font-size:10px; font-family:monospace; color:#94a3b8;">${event.event_id}</span>
                     </div>
-                    <div style="font-size:14px; font-weight:700; color:#ffffff; margin-bottom:4px;">
-                        ${event.frp} MW FRP
+                    <div style="font-size:15px; font-weight:700; color:#ffffff; margin-bottom:2px;">
+                        ${event.frp} MW Thermal FRP
                     </div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-bottom:8px;">
+                    <div style="font-size:10px; font-family:monospace; color:#94a3b8; margin-bottom:6px;">
+                        ${event.latitude.toFixed(4)}° N, ${event.longitude.toFixed(4)}° E
+                    </div>
+                    <div style="font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;">
                         ${event.nearest_industrial_facility || event.land_cover}<br>
-                        <small style="color:#64748b;">Distance: ${event.industrial_distance_km} km</small>
+                        <small style="color:#f97316; font-weight:600;">Distance to plant: ${event.industrial_distance_km} km</small>
                     </div>
                     <button class="btn btn-secondary btn-sm btn-full popup-inspect-btn" data-id="${event.event_id}">
                         Inspect Telemetry
@@ -494,6 +623,77 @@
                 });
             });
         });
+    }
+
+    // Dynamically highlights and elevates the active focal anomaly marker
+    function highlightFocalMarker(selectedId) {
+        if (!markersLayerGroup) return;
+        markersLayerGroup.eachLayer(marker => {
+            if (!marker._eventId) return;
+            const isFocal = marker._eventId === selectedId;
+            marker.setZIndexOffset(isFocal ? 1200 : 0);
+            const el = marker.getElement();
+            if (el) {
+                const container = el.querySelector('.pin-marker-container');
+                if (container) {
+                    if (isFocal) {
+                        container.classList.add('pin-selected');
+                        if (!container.querySelector('.pin-focal-beacon')) {
+                            const beacon = document.createElement('div');
+                            beacon.className = 'pin-focal-beacon';
+                            container.appendChild(beacon);
+                        }
+                    } else {
+                        container.classList.remove('pin-selected');
+                        const beacon = container.querySelector('.pin-focal-beacon');
+                        if (beacon) beacon.remove();
+                    }
+                }
+            }
+        });
+    }
+
+    // Proximity Vector Connector (Industrial Heat Trace <-> Industrial Facility Hub)
+    function drawProximityVector(event) {
+        if (proximityVectorLayer && map) {
+            map.removeLayer(proximityVectorLayer);
+            proximityVectorLayer = null;
+        }
+        if (!event || event.classification !== 'INDUSTRIAL' || !event.nearest_industrial_facility) return;
+
+        const hub = KNOWN_INDUSTRIAL_HUBS.find(h => h.name.toLowerCase() === event.nearest_industrial_facility.toLowerCase())
+                 || KNOWN_INDUSTRIAL_HUBS.find(h => event.nearest_industrial_facility.toLowerCase().includes(h.name.toLowerCase().split(' ')[0]))
+                 || KNOWN_INDUSTRIAL_HUBS[0];
+
+        if (!hub || !map) return;
+
+        const p1 = [event.latitude, event.longitude];
+        const p2 = [hub.lat, hub.lon];
+        const mid = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+
+        const line = L.polyline([p1, p2], {
+            className: 'proximity-vector-line',
+            color: '#ea580c',
+            weight: 2.5,
+            dashArray: '6, 6',
+            opacity: 0.95
+        });
+
+        const distLabel = event.industrial_distance_km < 1
+            ? `${Math.round(event.industrial_distance_km * 1000)} m`
+            : `${event.industrial_distance_km.toFixed(2)} km`;
+
+        const badge = L.marker(mid, {
+            icon: L.divIcon({
+                className: 'custom-map-marker',
+                html: `<div class="proximity-badge-marker">⚡ ${distLabel} to ${hub.name.split(' ')[0]}</div>`,
+                iconSize: [120, 24],
+                iconAnchor: [60, 12]
+            }),
+            interactive: false
+        });
+
+        proximityVectorLayer = L.layerGroup([line, badge]).addTo(map);
     }
 
     // ----------------------------------------------------------------------
@@ -552,6 +752,9 @@
 
         if (!event) return;
 
+        // Draw proximity connector vector to nearest industrial facility
+        drawProximityVector(event);
+
         const emptyState = document.getElementById('inspectorEmptyState');
         const inspectorContent = document.getElementById('inspectorContent');
 
@@ -573,17 +776,6 @@
         if (probText) probText.textContent = `${probPct}% Certainty Score`;
         if (fillBar) fillBar.style.width = `${probPct}%`;
 
-        // Evidence
-        const evidenceList = document.getElementById('evidenceList');
-        if (evidenceList) {
-            const reasons = event.reasons && event.reasons.length > 0 ? event.reasons : [
-                `Proximity: ${event.industrial_distance_km} km to nearest facility`,
-                `FRP Thermal intensity: ${event.frp} MW`,
-                `Temporal recurrence: ${event.hotspot_count_30d} hits in 30 days`
-            ];
-            evidenceList.innerHTML = reasons.map(r => `<li><i data-lucide="${isInd ? 'flame' : 'trees'}"></i><span>${r}</span></li>`).join('');
-            initLucideIcons();
-        }
 
         // Specs
         document.getElementById('detFacility').textContent = event.nearest_industrial_facility || 'None within 5 km';
@@ -599,8 +791,14 @@
         document.getElementById('detConfidence').textContent = (event.confidence || 'HIGH').toUpperCase();
 
         if (focusMap && map) {
-            map.flyTo([event.latitude, event.longitude], 12, { duration: 1.0 });
+            map.flyTo([event.latitude, event.longitude], 14, { duration: 1.2 });
         }
+
+        // Elevate and highlight focal center anomaly on map
+        highlightFocalMarker(eventId);
+
+        // Ensure newly rendered inspector SVGs are initialized
+        initLucideIcons();
     }
 
     // ----------------------------------------------------------------------
@@ -898,20 +1096,93 @@
             showToast('Filters reset', 'info');
         });
 
-        // Basemap Switcher
-        document.querySelectorAll('.tile-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const tileType = btn.getAttribute('data-tile');
+        // ----------------------------------------------------------------------
+        // BASEMAP SWITCHER (TOP BAR TOGGLE & MAP DROPDOWN)
+        // ----------------------------------------------------------------------
+        function switchBasemap(tileType) {
+            if (!tileLayers[tileType] || tileType === appState.activeTileLayer) return;
 
-                if (tileLayers[appState.activeTileLayer] && map) {
-                    map.removeLayer(tileLayers[appState.activeTileLayer]);
+            if (tileLayers[appState.activeTileLayer] && map) {
+                map.removeLayer(tileLayers[appState.activeTileLayer]);
+            }
+            appState.activeTileLayer = tileType;
+            if (tileLayers[tileType] && map) {
+                tileLayers[tileType].addTo(map);
+            }
+
+            // Sync Top Bar Toggle Button
+            document.querySelectorAll('.basemap-toggle-btn').forEach(b => {
+                const isTarget = b.getAttribute('data-tile') === tileType;
+                b.classList.toggle('active', isTarget);
+                b.classList.toggle('bg-brand-panel', isTarget);
+                b.classList.toggle('text-white', isTarget);
+                b.classList.toggle('shadow-sm', isTarget);
+                b.classList.toggle('text-slate-400', !isTarget);
+            });
+
+            // Sync Floating Map Dropdown
+            document.querySelectorAll('.basemap-option-btn').forEach(b => {
+                const isTarget = b.getAttribute('data-tile') === tileType;
+                b.classList.toggle('active', isTarget);
+                b.classList.toggle('text-white', isTarget);
+                b.classList.toggle('bg-brand-panel', isTarget);
+                b.classList.toggle('border-brand-borderLight/60', isTarget);
+                b.classList.toggle('border-transparent', !isTarget);
+                b.classList.toggle('text-slate-300', !isTarget);
+                const check = b.querySelector('[data-lucide="check"]');
+                if (check) check.classList.toggle('hidden', !isTarget);
+            });
+
+            const activeBasemapLabel = document.getElementById('activeBasemapLabel');
+            if (activeBasemapLabel) {
+                activeBasemapLabel.textContent = tileType === 'street' ? 'Street View' : 'Satellite View';
+            }
+
+            showToast(`Basemap mode: ${tileType === 'street' ? 'Street View' : 'Satellite Imagery'}`, 'info');
+        }
+
+        // Top Bar Toggle Click Handlers
+        document.querySelectorAll('.basemap-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tileType = btn.getAttribute('data-tile');
+                switchBasemap(tileType);
+            });
+        });
+
+        // Floating Map Dropdown Control
+        const btnBasemapDropdown = document.getElementById('btnBasemapDropdown');
+        const basemapDropdownMenu = document.getElementById('basemapDropdownMenu');
+        const basemapChevron = document.getElementById('basemapChevron');
+
+        if (btnBasemapDropdown && basemapDropdownMenu) {
+            btnBasemapDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isClosed = basemapDropdownMenu.classList.contains('hidden');
+                if (isClosed) {
+                    basemapDropdownMenu.classList.remove('hidden');
+                    if (basemapChevron) basemapChevron.style.transform = 'rotate(180deg)';
+                } else {
+                    basemapDropdownMenu.classList.add('hidden');
+                    if (basemapChevron) basemapChevron.style.transform = 'rotate(0deg)';
                 }
-                appState.activeTileLayer = tileType;
-                if (tileLayers[tileType] && map) {
-                    tileLayers[tileType].addTo(map);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!btnBasemapDropdown.contains(e.target) && !basemapDropdownMenu.contains(e.target)) {
+                    basemapDropdownMenu.classList.add('hidden');
+                    if (basemapChevron) basemapChevron.style.transform = 'rotate(0deg)';
                 }
+            });
+        }
+
+        // Floating Map Dropdown Item Click Handlers
+        document.querySelectorAll('.basemap-option-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const tileType = btn.getAttribute('data-tile');
+                switchBasemap(tileType);
+                basemapDropdownMenu?.classList.add('hidden');
+                if (basemapChevron) basemapChevron.style.transform = 'rotate(0deg)';
             });
         });
 
@@ -953,6 +1224,25 @@
             }
         });
 
+        // Fit View / Recenter Map Button
+        document.getElementById('btnFitBounds')?.addEventListener('click', fitHotspotsView);
+
+        // Global Keyboard Shortcuts for Map Interactivity
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+            if (e.key === 'Escape') {
+                if (map) map.closePopup();
+                if (proximityVectorLayer && map) {
+                    map.removeLayer(proximityVectorLayer);
+                    proximityVectorLayer = null;
+                }
+            } else if (e.key === '+' || e.key === '=') {
+                if (map) map.zoomIn();
+            } else if (e.key === '-') {
+                if (map) map.zoomOut();
+            }
+        });
+
         document.getElementById('btnExportData')?.addEventListener('click', () => exportToCSV(appState.filteredEvents));
 
         // Modal
@@ -973,6 +1263,23 @@
             runSimulationAttribution(lat, lon, frp, bt, landCover, satellite);
             simModal?.classList.add('hidden');
         });
+    }
+
+    // UX Life Improvement: Recenter map to frame all active hotspots & facilities
+    function fitHotspotsView() {
+        if (!map) return;
+        const points = [];
+        appState.filteredEvents.forEach(e => points.push([e.latitude, e.longitude]));
+        if (appState.layers.industrialNodes) {
+            KNOWN_INDUSTRIAL_HUBS.forEach(h => points.push([h.lat, h.lon]));
+        }
+        if (points.length > 0) {
+            const bounds = L.latLngBounds(points);
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 13, animate: true });
+            showToast(`Framed ${appState.filteredEvents.length} active thermal anomalies`, 'info');
+        } else {
+            map.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, { duration: 1.0 });
+        }
     }
 
     function exportToCSV(events) {

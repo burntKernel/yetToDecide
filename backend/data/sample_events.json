@@ -1,8 +1,8 @@
 [
   {
     "event_id": "FIRMS-IND-2025-001",
-    "latitude": 22.3072,
-    "longitude": 73.1812,
+    "latitude": 22.3087,
+    "longitude": 73.1826,
     "acq_date": "2025-05-12",
     "acq_time": "1330",
     "satellite": "VIIRS_SNPP",
@@ -57,8 +57,8 @@
   },
   {
     "event_id": "FIRMS-IND-2025-003",
-    "latitude": 20.8880,
-    "longitude": 85.1511,
+    "latitude": 20.8908,
+    "longitude": 85.1538,
     "acq_date": "2025-05-18",
     "acq_time": "0210",
     "satellite": "VIIRS_SNPP",
