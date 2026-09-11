@@ -1,43 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ThermaSight - Thermal Event Monitoring</title>
-    <meta name="description" content="Thermal Anomaly Source Attribution platform integrating NASA FIRMS VIIRS satellite data, OSM spatial proximity, and XGBoost machine learning models.">
+    <title>ThermaSight - Satellite Thermal Anomaly Monitoring</title>
+    <meta name="description" content="ThermaSight: From Satellite Data to Action. Thermal Anomaly Source Attribution integrating NASA FIRMS VIIRS satellite data, spatial proximity, and XGBoost AI models.">
 
-    <!-- Tailwind CSS v3 with Forms & Container Plugins -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            orange: '#ff6b00',
-                            dark:   '#0a0e1a',
-                            header: '#0e1424',
-                            panel:  '#121829',
-                            card:   '#161e33',
-                            border: '#1e2942',
-                            borderLight: '#2d3d61',
-                            muted:  '#94a3b8'
-                        }
-                    },
-                    fontFamily: {
-                        mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
-                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -48,636 +23,1451 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Custom CSS (markers, animations, leaflet overrides) -->
+    <!-- Custom CSS (Reference Design Theme) -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body class="bg-brand-dark text-slate-200 font-sans overflow-hidden h-screen w-screen">
-<div class="flex flex-col h-screen w-screen overflow-hidden">
+<body class="flex h-screen w-screen overflow-hidden bg-[#f4f6f9]">
 
-    <!-- ═══════════════════════════════════════════════════
-         HEADER
-    ═══════════════════════════════════════════════════ -->
-    <header class="h-[50px] shrink-0 bg-brand-header border-b border-brand-border flex items-center justify-between px-3.5 gap-4 z-30">
-
-        <!-- Left: Brand -->
-        <div class="flex items-center gap-2.5 shrink-0">
-            <button id="btnToggleSidebar"
-                    class="p-1.5 rounded text-slate-400 hover:text-slate-100 hover:bg-brand-panel transition-colors"
-                    title="Toggle Sidebar (Ctrl+B)">
-                <i data-lucide="panel-left" class="w-4 h-4"></i>
-            </button>
-
-            <div class="w-7 h-7 rounded bg-orange-600 flex items-center justify-center text-white">
-                <i data-lucide="flame" class="w-3.5 h-3.5"></i>
+    <!-- ══════════════════════════════════════════════════════════════════════════
+         LEFT PERSISTENT NAVIGATION SIDEBAR (DARK NAVY)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <aside id="appSidebar" class="sidebar-container">
+        <!-- Logo & Collapse Toggle -->
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-brand">
+                <div class="sidebar-logo-icon">
+                    <i data-lucide="flame" class="w-6 h-6 text-orange-500 fill-orange-500/20"></i>
+                </div>
+                <div class="sidebar-logo-text-wrap">
+                    <div class="sidebar-logo-text">Therma<span class="text-orange-500">Sight</span></div>
+                    <div class="sidebar-logo-sub">From Satellite Data to Action</div>
+                </div>
             </div>
+            <button id="btnToggleSidebar" class="sidebar-toggle-btn" title="Collapse sidebar (Ctrl+B)">
+                <i data-lucide="panel-left-close" class="w-4 h-4"></i>
+            </button>
+        </div>
 
+        <!-- 1. Main Navigation Menu (Map Explorer Mode) -->
+        <nav id="mainNavList" class="sidebar-nav-list">
+            <a id="navMap" class="sidebar-nav-item active" data-view="map" title="Map">
+                <i data-lucide="map" class="w-4 h-4"></i>
+                <span>Map</span>
+            </a>
+            <a id="navAnalytics" class="sidebar-nav-item" data-view="analytics" title="Analytics">
+                <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                <span>Analytics</span>
+            </a>
+            <a id="navAlerts" class="sidebar-nav-item" data-view="alerts" title="Alerts (27)">
+                <i data-lucide="bell" class="w-4 h-4"></i>
+                <span>Alerts</span>
+                <span id="sidebarAlertsBadge" class="sidebar-nav-badge">27</span>
+            </a>
+            <a id="navData" class="sidebar-nav-item" data-view="data" title="Data">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                <span>Data</span>
+            </a>
+        </nav>
+
+        <!-- 2. Detail Navigation Menu (Event Inspector Mode) -->
+        <nav id="detailNavList" class="sidebar-nav-list hidden">
+            <a id="sidebarBackToMap" class="sidebar-nav-item text-slate-300 font-semibold mb-1 hover:bg-slate-800/60" title="Back to Map">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span>Back to Map</span>
+            </a>
+            <a id="sideTabOverview" class="sidebar-nav-item active" data-tab="overview" title="Overview">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span>Overview</span>
+            </a>
+            <a id="sideTabTemporal" class="sidebar-nav-item" data-tab="temporal" title="Temporal Behaviour">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+                <span>Temporal Behaviour</span>
+            </a>
+            <a id="sideTabNearby" class="sidebar-nav-item" data-tab="nearby" title="Nearby Facilities">
+                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                <span>Nearby Facilities</span>
+            </a>
+            <a id="sideTabData" class="sidebar-nav-item" data-tab="data" title="Raw Data">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                <span>Raw Data</span>
+            </a>
+        </nav>
+
+        <!-- Dark Mode Slide Switch -->
+        <div class="sidebar-theme-toggle">
             <div class="flex items-center gap-2">
-                <span class="font-bold tracking-tight text-white text-[15px]" style="font-family:'Space Grotesk',sans-serif;">
-                    Therma<span class="text-orange-500">Sight</span>
-                    <span class="text-[10px] font-semibold px-1 py-0.5 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded ml-1 align-middle">AI</span>
-                </span>
+                <i data-lucide="moon" class="w-4 h-4 text-slate-400" id="themeIconMoon"></i>
+                <i data-lucide="sun" class="w-4 h-4 text-amber-400 hidden" id="themeIconSun"></i>
+                <span class="text-[12px] font-medium text-slate-300" id="themeLabelText">Dark Mode</span>
             </div>
-
-            <!-- Live Status Chip -->
-            <button id="systemStatusChip"
-                    class="flex items-center gap-1.5 bg-brand-dark border border-brand-border px-2 py-1 rounded-full text-[11px] text-slate-400 hover:bg-brand-panel transition-colors">
-                <span class="chip-dot w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                <span id="statusText">Syncing...</span>
-            </button>
+            <label class="theme-slide-switch" title="Toggle Dark / Light Mode">
+                <input id="themeToggleCheckbox" type="checkbox">
+                <span class="theme-slide-slider"></span>
+            </label>
         </div>
 
-        <!-- Center: Search + Category Pills -->
-        <div class="flex items-center gap-3 flex-1 max-w-[580px]">
-            <div class="relative flex-1">
-                <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none"></i>
-                <input id="searchInput"
-                       type="text"
-                       placeholder="Search facility, event ID, region or land cover..."
-                       autocomplete="off"
-                       class="w-full bg-brand-dark border border-brand-border rounded-lg py-1.5 pl-8 pr-8 text-[12px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-orange-500 transition-colors">
-                <button id="clearSearchBtn"
-                        class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition-colors">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                </button>
-            </div>
-
-            <div id="classFilterGroup"
-                 class="flex bg-brand-dark border border-brand-border rounded-lg p-0.5 shrink-0">
-                <button data-class="ALL"
-                        class="pill-btn active px-2.5 py-1 rounded text-[11px] font-medium transition-all bg-brand-panel text-white">All</button>
-                <button data-class="INDUSTRIAL"
-                        class="pill-btn pill-ind px-2.5 py-1 rounded text-[11px] font-medium transition-all text-slate-400 hover:text-white">Industrial</button>
-                <button data-class="NATURAL"
-                        class="pill-btn pill-nat px-2.5 py-1 rounded text-[11px] font-medium transition-all text-slate-400 hover:text-white">Natural</button>
-            </div>
-        </div>
-
-        <!-- Right: Stats + View Switcher + Actions -->
-        <div class="flex items-center gap-3 shrink-0">
-
-            <!-- Telemetry strip -->
-            <div class="hidden xl:flex items-center gap-2.5 bg-brand-dark border border-brand-border rounded-lg px-3 py-1">
-                <div class="flex flex-col items-center leading-none">
-                    <span id="statTotalEvents" class="text-[13px] font-bold text-white" style="font-family:'Space Grotesk',sans-serif;">--</span>
-                    <span class="text-[9px] text-slate-500 uppercase tracking-wide mt-0.5">Events</span>
-                </div>
-                <div class="w-px h-4 bg-brand-border"></div>
-                <div class="flex flex-col items-center leading-none">
-                    <span id="statIndustrialCount" class="text-[13px] font-bold text-orange-500" style="font-family:'Space Grotesk',sans-serif;">--</span>
-                    <span class="text-[9px] text-slate-500 uppercase tracking-wide mt-0.5">Industrial</span>
-                </div>
-                <div class="w-px h-4 bg-brand-border"></div>
-                <div class="flex flex-col items-center leading-none">
-                    <span id="statNaturalCount" class="text-[13px] font-bold text-emerald-600" style="font-family:'Space Grotesk',sans-serif;">--</span>
-                    <span class="text-[9px] text-slate-500 uppercase tracking-wide mt-0.5">Natural</span>
-                </div>
-                <div class="w-px h-4 bg-brand-border"></div>
-                <div class="flex flex-col items-center leading-none">
-                    <span id="statMaxFrp" class="text-[13px] font-bold text-white" style="font-family:'Space Grotesk',sans-serif;">--</span>
-                    <span class="text-[9px] text-slate-500 uppercase tracking-wide mt-0.5">Peak MW</span>
-                </div>
-            </div>
-
-            <!-- Basemap Mode Toggle (Street / Satellite) -->
-            <div id="basemapToggleGroup"
-                 class="flex bg-brand-dark border border-brand-border rounded-lg p-0.5 shrink-0 items-center">
-                <button id="btnToggleStreet" data-tile="street"
-                        class="basemap-toggle-btn active flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all bg-brand-panel text-white shadow-sm"
-                        title="Street Map View">
-                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-orange-500"></i>
-                    <span>Street</span>
-                </button>
-                <button id="btnToggleSatellite" data-tile="sat"
-                        class="basemap-toggle-btn flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all text-slate-400 hover:text-white"
-                        title="Satellite Imagery View">
-                    <i data-lucide="globe" class="w-3.5 h-3.5"></i>
-                    <span>Satellite</span>
-                </button>
-            </div>
-
-            <!-- View Switcher -->
-            <div class="flex bg-brand-dark border border-brand-border rounded-lg p-0.5">
-                <button id="tabViewMap" data-view="map"
-                        class="view-tab active p-1.5 rounded text-orange-500 bg-brand-panel transition-all"
-                        title="Map View">
-                    <i data-lucide="map" class="w-3.5 h-3.5"></i>
-                </button>
-                <button id="tabViewGrid" data-view="grid"
-                        class="view-tab p-1.5 rounded text-slate-400 hover:text-white transition-all"
-                        title="Table View">
-                    <i data-lucide="table" class="w-3.5 h-3.5"></i>
-                </button>
-                <button id="tabViewAnalytics" data-view="analytics"
-                        class="view-tab p-1.5 rounded text-slate-400 hover:text-white transition-all"
-                        title="Analytics View">
-                    <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
-                </button>
-            </div>
-
-            <button id="btnSimulateModal"
-                    class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-dark border border-brand-border text-[11px] font-semibold text-slate-200 hover:bg-brand-panel hover:border-brand-borderLight transition-colors">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Simulate
-            </button>
-
-            <button id="btnExportData"
-                    class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-700 hover:bg-orange-600 text-white text-[11px] font-semibold transition-colors">
-                <i data-lucide="download" class="w-3.5 h-3.5"></i> Export
-            </button>
-        </div>
-    </header>
-
-    <!-- ═══════════════════════════════════════════════════
-         MAIN LAYOUT
-    ═══════════════════════════════════════════════════ -->
-    <main class="flex-1 flex overflow-hidden relative">
-
-        <!-- ─── LEFT SIDEBAR FILTERS ─── -->
-        <aside id="controlPanel"
-               class="w-[280px] shrink-0 bg-brand-panel border-r border-brand-border flex flex-col z-20 transition-[margin] duration-[250ms]">
-
-            <div class="px-3.5 py-2.5 border-b border-brand-border flex items-center justify-between">
-                <span class="flex items-center gap-1.5 text-[12px] font-semibold text-white uppercase tracking-wide" style="font-family:'Space Grotesk',sans-serif;">
-                    <i data-lucide="sliders" class="w-3.5 h-3.5 text-orange-500"></i> Filters &amp; GIS Controls
+        <!-- Live Sync Status Card -->
+        <div class="sidebar-status-card">
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <button id="btnResetFilters" class="text-[11px] text-orange-500 hover:underline transition-colors">Reset</button>
+                <span class="text-[11px] font-semibold text-emerald-400">Live Sync Active</span>
             </div>
+            <div class="text-[10px] text-slate-400">FIRMS (VIIRS-SNPP)</div>
+            <div class="text-[9px] text-slate-500 mt-1">Last updated<br><span id="lastUpdatedText" class="text-slate-400 font-mono">12 May 2025, 13:30 UTC</span></div>
+        </div>
+    </aside>
 
-            <div class="flex-1 overflow-y-auto custom-scrollbar p-3.5 flex flex-col gap-0 text-xs">
+    <!-- ══════════════════════════════════════════════════════════════════════════
+         MAIN WORKSPACE
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
 
-                <!-- FRP Slider -->
-                <div class="filter-section">
-                    <div class="filter-section-label">
-                        <i data-lucide="zap" class="w-3 h-3 text-orange-500"></i>
-                        <span>Min Fire Power (FRP)</span>
-                    </div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] text-slate-500">Radiative power threshold</span>
-                        <span id="frpSliderVal" class="slider-val-badge">0 MW</span>
-                    </div>
-                    <div class="slider-wrap">
-                        <input id="frpSlider" type="range" min="0" max="100" step="5" value="0" class="custom-range">
-                    </div>
-                    <div class="flex justify-between text-[9px] text-slate-600 mt-1.5 px-0.5">
-                        <span>0 MW</span><span>50 MW</span><span>100+ MW</span>
-                    </div>
+        <!-- ──────────────────────────────────────────────────────────────────
+             SCREEN 1: MAP EXPLORER DASHBOARD
+        ────────────────────────────────────────────────────────────────── -->
+        <div id="screenMap" class="screen-view active flex-col flex-1 overflow-hidden">
+
+            <!-- Top Bar -->
+            <header class="topbar-container">
+                <!-- Search Input -->
+                <div class="topbar-search-wrap">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    <input id="searchInput" type="text" placeholder="Search location, facility, or event ID..." class="topbar-search-input">
                 </div>
 
-                <!-- Confidence Slider -->
-                <div class="filter-section">
-                    <div class="filter-section-label">
-                        <i data-lucide="brain" class="w-3 h-3 text-orange-500"></i>
-                        <span>Min AI Confidence</span>
-                    </div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] text-slate-500">XGBoost certainty score</span>
-                        <span id="confSliderVal" class="slider-val-badge">50%</span>
-                    </div>
-                    <div class="slider-wrap">
-                        <input id="confSlider" type="range" min="0.5" max="0.99" step="0.05" value="0.50" class="custom-range">
-                    </div>
-                    <div class="flex justify-between text-[9px] text-slate-600 mt-1.5 px-0.5">
-                        <span>50%</span><span>75%</span><span>99%</span>
+                <!-- Right Controls: Date Picker -->
+                <div class="flex items-center gap-4">
+                    <!-- Date Picker -->
+                    <div class="topbar-date-picker">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>1 May 2025 - 12 May 2025</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
                     </div>
                 </div>
+            </header>
 
-                <!-- Proximity Checkbox -->
-                <div class="filter-section">
-                    <div class="filter-section-label">
-                        <i data-lucide="map-pin" class="w-3 h-3 text-orange-500"></i>
-                        <span>Proximity Filter</span>
+            <!-- 4 KPI Summary Cards Row -->
+            <div class="kpi-row-grid">
+                <!-- Total Thermal Sources -->
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-amber-50 text-amber-500 border border-amber-100">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
                     </div>
-                    <label class="custom-checkbox-row">
-                        <input id="chkIndustrialOnly" type="checkbox">
-                        <span class="custom-checkbox-box">
-                            <i data-lucide="check" class="w-2.5 h-2.5"></i>
-                        </span>
-                        <span class="text-[11px] text-slate-300">Industrial Proximity &lt; 1.0 km</span>
-                    </label>
-                </div>
-
-                <!-- Recurrence Select -->
-                <div class="filter-section">
-                    <div class="filter-section-label">
-                        <i data-lucide="repeat" class="w-3 h-3 text-orange-500"></i>
-                        <span>Hotspot Recurrence</span>
-                    </div>
-                    <div class="custom-select-wrap">
-                        <select id="selectRecurrence" class="custom-select">
-                            <option value="all">Any Recurrence</option>
-                            <option value="high">High (&ge; 10 in 30d)</option>
-                            <option value="transient">Transient (&lt; 5 in 30d)</option>
-                        </select>
-                        <i data-lucide="chevron-down" class="custom-select-arrow"></i>
-                    </div>
-                </div>
-
-
-                <!-- Overlay Toggles -->
-                <div class="filter-section" style="border-bottom:none;">
-                    <div class="filter-section-label">
-                        <i data-lucide="eye" class="w-3 h-3 text-orange-500"></i>
-                        <span>Map Overlays</span>
-                    </div>
-                    <div class="flex flex-col gap-2.5">
-
-                        <label class="toggle-row">
-                            <span class="toggle-label">Industrial Hub Markers</span>
-                            <div class="toggle-track">
-                                <input id="toggleIndustrialNodes" type="checkbox" checked class="sr-only">
-                                <div class="toggle-bg"></div>
-                                <div class="toggle-thumb"></div>
-                            </div>
-                        </label>
-
-                        <label class="toggle-row">
-                            <span class="toggle-label">Facility Buffer Rings (5km)</span>
-                            <div class="toggle-track">
-                                <input id="toggleBufferRings" type="checkbox" checked class="sr-only">
-                                <div class="toggle-bg"></div>
-                                <div class="toggle-thumb"></div>
-                            </div>
-                        </label>
-
-                        <label class="toggle-row">
-                            <span class="toggle-label">Pulse Hotspot Animation</span>
-                            <div class="toggle-track">
-                                <input id="toggleFrpPulse" type="checkbox" checked class="sr-only">
-                                <div class="toggle-bg"></div>
-                                <div class="toggle-thumb"></div>
-                            </div>
-                        </label>
-
-                    </div>
-                </div>
-
-            </div><!-- end scroll -->
-
-            <div class="px-3.5 py-2 border-t border-brand-border bg-brand-dark flex items-center justify-between text-[11px] text-slate-500">
-                <span>Showing <strong id="filteredCount" class="text-slate-200">0</strong> / <span id="totalCount">0</span> events</span>
-                <span class="flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                    <span id="lastUpdatedLabel">Live</span>
-                </span>
-            </div>
-        </aside><!-- end left sidebar -->
-
-        <!-- ─── CENTER VIEWPORT ─── -->
-        <section class="flex-1 relative overflow-hidden bg-brand-dark">
-
-            <!-- VIEW 1: MAP -->
-            <div id="viewMapContainer" class="view-panel active absolute inset-0">
-                <div id="map" class="w-full h-full bg-[#060911]"></div>
-
-                <!-- Floating Basemap Cartography Dropdown -->
-                <div class="absolute top-4 right-4 z-20 flex flex-col items-end">
-                    <button id="btnBasemapDropdown"
-                            class="flex items-center gap-2 bg-brand-header/90 hover:bg-brand-panel hover:text-white backdrop-blur border border-brand-border hover:border-orange-500/50 rounded-lg px-3 py-2 text-[12px] text-slate-200 font-medium shadow-lg transition-all active:scale-95 group"
-                            title="Basemap Cartography">
-                        <i data-lucide="layers" class="w-4 h-4 text-orange-500 group-hover:rotate-12 transition-transform"></i>
-                        <span id="activeBasemapLabel" class="font-medium">Street View</span>
-                        <i data-lucide="chevron-down" id="basemapChevron" class="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform duration-200"></i>
-                    </button>
-
-                    <!-- Dropdown Menu -->
-                    <div id="basemapDropdownMenu"
-                         class="hidden mt-1.5 w-48 bg-brand-header/95 backdrop-blur-md border border-brand-border rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-30 transition-all duration-200">
-                        <div class="px-2.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-brand-border/60">
-                            Basemap Cartography
+                    <div>
+                        <div class="kpi-title">Total Thermal Sources</div>
+                        <div class="flex items-baseline">
+                            <span id="kpiTotalSources" class="kpi-value">373,738</span>
+                            <span class="kpi-trend text-emerald-600">
+                                <i data-lucide="arrow-up" class="w-3 h-3 inline"></i> 12%
+                            </span>
                         </div>
-                        <button data-tile="street"
-                                class="basemap-option-btn active flex items-center justify-between w-full px-2.5 py-2 rounded-lg text-left text-[12px] font-medium transition-all text-white bg-brand-panel border border-brand-borderLight/60">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-4 h-4 rounded-md shadow-sm shrink-0" style="background:linear-gradient(135deg,#3b4b5e,#263547);"></span>
-                                <span>Street View</span>
-                            </div>
-                            <i data-lucide="check" class="w-3.5 h-3.5 text-orange-500"></i>
-                        </button>
-                        <button data-tile="sat"
-                                class="basemap-option-btn flex items-center justify-between w-full px-2.5 py-2 rounded-lg text-left text-[12px] font-medium transition-all text-slate-300 hover:text-white hover:bg-brand-panel/60 border border-transparent">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-4 h-4 rounded-md shadow-sm shrink-0" style="background:linear-gradient(135deg,#1b3d2b,#0d2b1f);"></span>
-                                <span>Satellite View</span>
-                            </div>
-                            <i data-lucide="check" class="w-3.5 h-3.5 text-orange-500 hidden"></i>
-                        </button>
+                        <div class="text-[9.5px] text-slate-400">from previous period</div>
                     </div>
                 </div>
 
-                <!-- Map HUD -->
-                <div class="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-2.5 pointer-events-none">
-                    <div class="pointer-events-auto flex items-center gap-2 bg-brand-header/90 backdrop-blur border border-brand-border rounded-lg px-3 py-1.5 text-[11px] text-slate-300 font-mono shadow-md">
-                        <i data-lucide="crosshair" class="w-3.5 h-3.5 text-orange-500"></i>
-                        <span id="coordsText">Zoom 5 | 22.5937° N, 78.9629° E</span>
+                <!-- High-Risk Sources -->
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-red-50 text-red-500 border border-red-100">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
                     </div>
-                    <button id="btnFitBounds" class="pointer-events-auto flex items-center gap-1.5 bg-brand-header/90 hover:bg-brand-panel hover:text-white backdrop-blur border border-brand-border hover:border-orange-500/50 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-medium transition-all shadow-md active:scale-95" title="Fit all hotspots in view">
-                        <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-orange-500"></i>
-                        <span>Fit View</span>
-                    </button>
-                    <div class="pointer-events-auto flex items-center gap-3 bg-brand-header/90 backdrop-blur border border-brand-border rounded-lg px-3 py-1.5 text-[11px] text-slate-400 shadow-md">
-                        <span class="flex items-center gap-1.5 text-slate-200">
-                            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]"></span> Industrial Flare Pin
-                        </span>
-                        <span class="flex items-center gap-1.5 text-slate-200">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Natural Wildfire Pin
-                        </span>
-                        <span class="flex items-center gap-1.5 text-cyan-400">
-                            <i data-lucide="factory" class="w-3.5 h-3.5"></i> Facility Node
-                        </span>
+                    <div>
+                        <div class="kpi-title">High-Risk Sources</div>
+                        <div class="flex items-baseline">
+                            <span id="kpiHighRisk" class="kpi-value">1,248</span>
+                            <span class="kpi-trend text-emerald-600">
+                                <i data-lucide="arrow-up" class="w-3 h-3 inline"></i> 8%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Near Industrial Areas -->
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-blue-50 text-blue-600 border border-blue-100">
+                        <i data-lucide="building-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Near Industrial Areas</div>
+                        <div class="flex items-baseline">
+                            <span id="kpiNearIndustrial" class="kpi-value">50,199</span>
+                            <span class="kpi-trend text-emerald-600">
+                                <i data-lucide="arrow-up" class="w-3 h-3 inline"></i> 15%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Alerts -->
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-rose-50 text-rose-500 border border-rose-100">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-title">Active Alerts</div>
+                        <div class="flex items-baseline">
+                            <span id="kpiActiveAlerts" class="kpi-value">27</span>
+                            <span class="kpi-trend text-red-500">
+                                <i data-lucide="arrow-up" class="w-3 h-3 inline"></i> 3 require review
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW 2: TABLE -->
-            <div id="viewGridContainer" class="view-panel absolute inset-0 flex flex-col">
-                <div class="px-4 py-2.5 bg-brand-panel border-b border-brand-border flex items-center justify-between shrink-0">
-                    <h3 class="text-sm font-semibold text-white" style="font-family:'Space Grotesk',sans-serif;">
-                        Thermal Anomaly Inventory (<span id="gridEventCount">0</span>)
-                    </h3>
-                    <span class="text-[11px] text-slate-500">Click any row to inspect AI model attribution telemetry</span>
+            <!-- Map & Events Drawer Workspace -->
+            <div class="map-workspace-wrap">
+
+                <!-- Leaflet Main Map Canvas -->
+                <div class="map-view-canvas">
+                    <div id="map"></div>
+
+                    <!-- Floating Map Controls (Top-Left) -->
+                    <div class="map-control-overlay-tl">
+                        <button id="btnZoomIn" class="map-floating-btn" title="Zoom In">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                        <button id="btnZoomOut" class="map-floating-btn" title="Zoom Out">
+                            <i data-lucide="minus" class="w-4 h-4"></i>
+                        </button>
+                        <button id="btnRecenter" class="map-floating-btn" title="Recenter View">
+                            <i data-lucide="crosshair" class="w-4 h-4"></i>
+                        </button>
+                        <button id="btnToggleLayer" class="map-floating-btn" title="Toggle Satellite / Street Basemap">
+                            <i data-lucide="layers" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Floating Map Legend (Bottom-Left) -->
+                    <div class="map-legend-card">
+                        <div class="legend-item">
+                            <span class="legend-dot high"></span>
+                            <span>High Risk</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot medium"></span>
+                            <span>Medium Risk</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot low"></span>
+                            <span>Low Risk</span>
+                        </div>
+                        <div class="legend-item">
+                            <i data-lucide="factory" class="w-3 h-3 text-cyan-600"></i>
+                            <span>Industrial Facility</span>
+                        </div>
+                        <div class="legend-scale-line">
+                            <span>0</span>
+                            <span>500 km</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex-1 overflow-auto custom-scrollbar">
-                    <table class="w-full border-collapse text-left text-[12px]">
+
+                <!-- Right Events Drawer -->
+                <aside class="events-panel-card">
+                    <!-- Drawer Header -->
+                    <div class="events-panel-header">
+                        <!-- Subhead: Count & Filter / Sort Flex (Clean single row without redundant Layers tab) -->
+                        <div id="eventsSubheadRow" class="events-subhead-row">
+                            <div>
+                                <span class="font-bold text-[13px] text-slate-800">Events</span>
+                                <span class="text-[11px] text-slate-400 block"><span id="eventsCountHeader">1,248</span> of 373,738 sources</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <!-- Category Filter Pills moved adjacent to Events name -->
+                                <div id="classFilterGroup" class="filter-pills-group text-[11px]">
+                                    <button class="filter-pill active" data-class="ALL">All</button>
+                                    <button class="filter-pill" data-class="INDUSTRIAL">Industrial</button>
+                                    <button class="filter-pill" data-class="NATURAL">Natural</button>
+                                </div>
+
+                                <!-- Sort by Dropdown Menu -->
+                                <div class="relative inline-block text-left" id="sortDropdownContainer">
+                                    <button id="sortDropdownBtn" class="flex items-center gap-1.5 text-[11px] text-slate-700 font-semibold bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg cursor-pointer transition-all border border-slate-200/70" title="Sort anomalies">
+                                        <span>Sort by: <span id="sortLabel" class="text-orange-600">Risk</span></span>
+                                        <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400 transition-transform duration-150" id="sortChevron"></i>
+                                    </button>
+                                    <!-- Dropdown Menu -->
+                                    <div id="sortDropdownMenu" class="hidden absolute right-0 mt-1.5 w-40 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                                        <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">Sort By</div>
+                                        <button class="sort-option-item w-full text-left px-3 py-1.5 text-[11px] flex items-center justify-between hover:bg-slate-50 transition-colors text-slate-800 font-semibold active" data-sort="risk" data-label="Risk">
+                                            <span>Risk Level</span>
+                                            <i data-lucide="check" class="w-3 h-3 text-orange-500 sort-check"></i>
+                                        </button>
+                                        <button class="sort-option-item w-full text-left px-3 py-1.5 text-[11px] flex items-center justify-between hover:bg-slate-50 transition-colors text-slate-600 font-medium" data-sort="frp" data-label="FRP">
+                                            <span>FRP Intensity</span>
+                                            <i data-lucide="check" class="w-3 h-3 text-orange-500 sort-check hidden"></i>
+                                        </button>
+                                        <button class="sort-option-item w-full text-left px-3 py-1.5 text-[11px] flex items-center justify-between hover:bg-slate-50 transition-colors text-slate-600 font-medium" data-sort="distance" data-label="Distance">
+                                            <span>Distance</span>
+                                            <i data-lucide="check" class="w-3 h-3 text-orange-500 sort-check hidden"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Events Scrollable Cards List (Visible on Events Tab) -->
+                    <div id="eventsListContainer" class="events-list-container custom-scrollbar">
+                        <!-- Event Cards injected via JS -->
+                    </div>
+
+                    <!-- Layers Panel Content (Visible on Layers Tab) -->
+                    <div id="layersPanelContent" class="layers-panel-content custom-scrollbar hidden">
+
+                        <!-- Map Overlays -->
+                        <div class="layers-box-card mt-3">
+                            <div class="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">Map Overlays</div>
+                            
+                            <!-- Thermal Hotspots -->
+                            <div class="layer-toggle-row">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                    <span class="text-[12px] font-medium text-slate-700">Thermal Hotspots</span>
+                                </div>
+                                <label class="theme-slide-switch scale-75">
+                                    <input id="toggleThermalHotspots" type="checkbox" checked>
+                                    <span class="theme-slide-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Industrial Facilities -->
+                            <div class="layer-toggle-row mt-2">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="factory" class="w-3.5 h-3.5 text-cyan-600"></i>
+                                    <span class="text-[12px] font-medium text-slate-700">Industrial Facilities</span>
+                                </div>
+                                <label class="theme-slide-switch scale-75">
+                                    <input id="toggleIndustrialNodes" type="checkbox" checked>
+                                    <span class="theme-slide-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Basemap Cartography Quick Switch -->
+                        <div class="layers-box-card mt-3">
+                            <div class="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Basemap Cartography</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="btnDrawerStreet" class="drawer-basemap-btn active">
+                                    <i data-lucide="map" class="w-3.5 h-3.5"></i>
+                                    <span>Street View</span>
+                                </button>
+                                <button id="btnDrawerSat" class="drawer-basemap-btn">
+                                    <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                                    <span>Satellite</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+            </div>
+
+        </div><!-- end screenMap -->
+
+
+        <!-- ──────────────────────────────────────────────────────────────────
+             SCREEN 2: EVENT DETAIL / INSPECTION VIEW (MULTI-TAB)
+        ────────────────────────────────────────────────────────────────── -->
+        <div id="screenDetail" class="screen-view flex-col flex-1 overflow-hidden">
+
+            <!-- Detail Top Navigation Bar -->
+            <header class="detail-topbar">
+                <button id="btnBackToMap" class="btn-back-map">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>Back to Map</span>
+                </button>
+
+                <!-- Navigation Controls -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1">
+                        <button id="btnPrevEvent" class="flex items-center gap-1 text-[12px] font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-md transition-colors">
+                            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                            <span>Previous Event</span>
+                        </button>
+                        <button id="btnNextEvent" class="flex items-center gap-1 text-[12px] font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-md transition-colors">
+                            <span>Next Event</span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Date Picker -->
+                    <div class="topbar-date-picker">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>1 Jan 2025 - 12 May 2025</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Detail Content Multi-Tab Wrapper -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+
+                <!-- ═══════════ TAB 1: OVERVIEW ═══════════ -->
+                <div id="tabContentOverview" class="detail-tab-content active detail-main-layout">
+                    <!-- Left 2/3 Content Pane -->
+                    <div class="detail-left-pane">
+                        <!-- Title & Badges Row -->
+                        <div>
+                            <div class="detail-header-row">
+                                <h1 id="detEventId" class="detail-event-title">FIRMS-IND-2025-001</h1>
+                                <span id="detRiskBadge" class="risk-badge high">High Risk</span>
+                                <span id="detPersistentBadge" class="badge-ind-persistent">
+                                    <i data-lucide="factory" class="w-3 h-3"></i>
+                                    <span id="detPersistentTag">Industrial / Persistent</span>
+                                </span>
+                            </div>
+
+                            <!-- Subtitle Metadata -->
+                            <div class="detail-sub-meta mt-2">
+                                <span class="flex items-center gap-1 text-slate-600">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    <span id="detFacilitySubtitle">Gujarat Refinery (0.22 km)</span>
+                                </span>
+                                <span class="flex items-center gap-1 text-slate-400">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                    <span id="detTimestampSubtitle">12 May 2025, 13:30 UTC</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Tab Strip -->
+                        <div class="detail-tabs-bar">
+                            <div class="detail-tab-item active" data-tab="overview">Overview</div>
+                            <div class="detail-tab-item" data-tab="temporal">Temporal Behaviour</div>
+                            <div class="detail-tab-item" data-tab="nearby">Nearby Facilities</div>
+                        </div>
+
+                        <!-- 4 Telemetry Metrics Cards -->
+                        <div class="detail-metrics-grid">
+                            <!-- FRP -->
+                            <div class="detail-metric-card">
+                                <div class="detail-metric-header">
+                                    <i data-lucide="flame" class="w-3.5 h-3.5 text-red-500"></i>
+                                    <span>FRP (MW)</span>
+                                </div>
+                                <div id="detFrpMetric" class="detail-metric-val text-red-500">64.2</div>
+                            </div>
+
+                            <!-- 30d Detections -->
+                            <div class="detail-metric-card">
+                                <div class="detail-metric-header">
+                                    <i data-lucide="activity" class="w-3.5 h-3.5 text-purple-600"></i>
+                                    <span>Detections (30 days)</span>
+                                </div>
+                                <div id="detDetectionsMetric" class="detail-metric-val text-purple-600">24</div>
+                            </div>
+
+                            <!-- AI Confidence -->
+                            <div class="detail-metric-card">
+                                <div class="detail-metric-header">
+                                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                    <span>AI Confidence</span>
+                                </div>
+                                <div id="detConfidenceMetric" class="detail-metric-val text-emerald-600">94%</div>
+                            </div>
+
+                            <!-- Distance to Facility -->
+                            <div class="detail-metric-card">
+                                <div class="detail-metric-header">
+                                    <i data-lucide="navigation" class="w-3.5 h-3.5 text-cyan-600"></i>
+                                    <span>Distance to Facility</span>
+                                </div>
+                                <div id="detDistanceMetric" class="detail-metric-val text-cyan-600">0.22 km</div>
+                            </div>
+                        </div>
+
+                        <!-- Why this is flagged? Section -->
+                        <div class="mt-1">
+                            <h3 class="text-[13px] font-bold text-slate-900 mb-3">Why this is flagged?</h3>
+                            <div id="detFlagReasonsList" class="flag-reasons-wrap">
+                                <!-- Populated dynamically via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Analyst Verification Callout Banner -->
+                        <div class="analyst-callout-banner mt-2">
+                            <i data-lucide="info" class="w-4 h-4 text-sky-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <span id="detCalloutText">This source shows persistent thermal activity in close proximity to an industrial facility. Analyst verification recommended.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right 1/3 Content Pane (Detail Satellite Map & Telemetry) -->
+                    <div class="detail-right-pane">
+                        <!-- Satellite Zoom Map Card -->
+                        <div class="detail-map-card">
+                            <div class="detail-map-viewport">
+                                <div id="detailMap"></div>
+
+                                <!-- Satellite / Street Pill Switcher -->
+                                <div class="detail-map-pill-toggle">
+                                    <button id="btnDetailStreet" class="detail-map-pill-btn active">Street</button>
+                                    <button id="btnDetailSat" class="detail-map-pill-btn">Satellite</button>
+                                </div>
+                            </div>
+
+                            <!-- Context Location & Facility Info -->
+                            <div class="detail-context-info">
+                                <!-- Coordinates row -->
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                    <div>
+                                        <div class="text-[10px] uppercase font-bold text-slate-400">Location</div>
+                                        <div id="detCoordsText" class="font-mono text-[12px] font-semibold text-slate-800">22.3872° N, 73.1812° E</div>
+                                    </div>
+                                    <button id="btnCopyCoords" class="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="Copy Coordinates">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Nearest Facility row -->
+                                <div>
+                                    <div class="text-[10px] uppercase font-bold text-slate-400 mb-1.5">Nearest Facility</div>
+                                    <div class="flex items-center gap-2.5 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                                        <div class="w-7 h-7 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center shrink-0">
+                                            <i data-lucide="building" class="w-4 h-4"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div id="detFacilityNameText" class="text-[11.5px] font-bold text-slate-800 truncate">Gujarat Refinery</div>
+                                            <div id="detFacilityDistText" class="text-[10.5px] font-mono text-cyan-600 font-semibold">0.22 km</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mini Inset Context Map Card -->
+                                <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-2.5 flex items-center gap-2.5">
+                                    <i data-lucide="map" class="w-4 h-4 text-slate-400"></i>
+                                    <span class="text-[11px] text-slate-600">Regional Context: <strong id="detRegionText">Gujarat, Western India</strong></span>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="detail-action-buttons-row mt-1">
+                                    <button id="btnWatchlist" class="btn-primary-orange">
+                                        <i data-lucide="bookmark" class="w-4 h-4"></i>
+                                        <span>Add to Watchlist</span>
+                                    </button>
+                                    <button id="btnExportReport" class="btn-secondary-outline">
+                                        <i data-lucide="download" class="w-4 h-4"></i>
+                                        <span>Export Report</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end tabContentOverview -->
+
+
+                <!-- ═══════════ TAB 2: TEMPORAL BEHAVIOUR ═══════════ -->
+                <div id="tabContentTemporal" class="detail-tab-content p-5">
+                    <!-- Header Row -->
+                    <div class="view-header-row">
+                        <div class="view-header-left">
+                            <div class="view-header-icon bg-purple-50 text-purple-600 border border-purple-100">
+                                <i data-lucide="activity" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="view-header-title">Temporal Behaviour</h2>
+                                <p class="view-header-sub">How the thermal activity changes over time</p>
+                            </div>
+                        </div>
+                        <div class="view-header-right">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-[13px] text-slate-800" id="temporalEventId">FIRMS-IND-2025-001</span>
+                                <span class="risk-badge high" id="temporalRiskBadge">High Risk</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                            </div>
+                            <div class="text-[11px] text-slate-400 flex items-center gap-3 mt-1">
+                                <span class="flex items-center gap-1 text-slate-600"><i data-lucide="map-pin" class="w-3 h-3"></i> <span id="temporalFacilitySub">Gujarat Refinery (0.22 km)</span></span>
+                                <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> <span id="temporalTimeSub">12 May 2025, 13:30 UTC</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 KPI Cards -->
+                    <div class="temporal-kpi-grid">
+                        <!-- Total Detections -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="calendar" class="w-4 h-4 text-purple-600"></i>
+                                <span>Total Detections</span>
+                            </div>
+                            <div class="temporal-kpi-val" id="kpiTemporalTotal">24</div>
+                            <div class="temporal-kpi-trend text-emerald-600">
+                                <i data-lucide="arrow-up" class="w-3 h-3"></i> 71% (14&rarr;24) <span class="text-[9.5px] text-slate-400 font-normal">vs. previous 30 days</span>
+                            </div>
+                        </div>
+
+                        <!-- Mean FRP -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="flame" class="w-4 h-4 text-red-500"></i>
+                                <span>Mean FRP</span>
+                            </div>
+                            <div class="temporal-kpi-val" id="kpiTemporalMean">64.2 <span class="text-xs font-normal text-slate-500">MW</span></div>
+                            <div class="temporal-kpi-trend text-emerald-600">
+                                <i data-lucide="arrow-up" class="w-3 h-3"></i> 38% <span class="text-[9.5px] text-slate-400 font-normal">vs. previous 30 days</span>
+                            </div>
+                        </div>
+
+                        <!-- Max FRP -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="bar-chart-2" class="w-4 h-4 text-purple-600"></i>
+                                <span>Max FRP</span>
+                            </div>
+                            <div class="temporal-kpi-val" id="kpiTemporalMax">102.5 <span class="text-xs font-normal text-slate-500">MW</span></div>
+                            <div class="temporal-kpi-trend text-emerald-600">
+                                <i data-lucide="arrow-up" class="w-3 h-3"></i> 52% <span class="text-[9.5px] text-slate-400 font-normal">vs. previous 30 days</span>
+                            </div>
+                        </div>
+
+                        <!-- Persistence -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="clock" class="w-4 h-4 text-blue-500"></i>
+                                <span>Persistence</span>
+                            </div>
+                            <div class="temporal-kpi-val" id="kpiTemporalPersist">24 <span class="text-xs font-normal text-slate-500">days</span></div>
+                            <div class="temporal-kpi-trend text-emerald-600">
+                                <i data-lucide="arrow-up" class="w-3 h-3"></i> 60% <span class="text-[9.5px] text-slate-400 font-normal">with detections</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thermal Activity Timeline -->
+                    <div class="timeline-card">
+                        <div class="timeline-header">
+                            <span class="timeline-title">Thermal Activity Timeline</span>
+                            <div class="timeline-legend-row">
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> FRP (MW)</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-orange-500 rounded-sm"></span> Detections</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Night-time Detections</span>
+                            </div>
+                            <div class="timeline-pills-wrap">
+                                <button class="timeline-pill active">30 Days</button>
+                                <button class="timeline-pill">90 Days</button>
+                                <button class="timeline-pill">1 Year</button>
+                            </div>
+                        </div>
+                        <div class="h-[210px] w-full relative">
+                            <canvas id="chartTemporalTimeline"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Triad Grid -->
+                    <div class="temporal-bottom-grid">
+                        <!-- Daily Pattern (Diurnal Matrix) -->
+                        <div class="triad-card">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="triad-title">Daily Pattern</span>
+                                <div class="flex items-center gap-1 text-[9.5px] text-slate-400">
+                                    <span>Low</span>
+                                    <div class="flex gap-0.5">
+                                        <span class="w-2 h-2 rounded-sm bg-[#132247]"></span>
+                                        <span class="w-2 h-2 rounded-sm bg-[#254a9c]"></span>
+                                        <span class="w-2 h-2 rounded-sm bg-[#f97316]"></span>
+                                        <span class="w-2 h-2 rounded-sm bg-[#facc15]"></span>
+                                    </div>
+                                    <span>High</span>
+                                </div>
+                            </div>
+                            <div id="diurnalMatrixContainer">
+                                <!-- Generated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Day vs Night Detections Donut -->
+                        <div class="triad-card">
+                            <span class="triad-title">Day vs Night Detections</span>
+                            <div class="flex items-center justify-between flex-1">
+                                <div class="w-[120px] h-[120px] relative shrink-0">
+                                    <canvas id="chartDayNightDonut"></canvas>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                        <span class="text-[16px] font-bold text-slate-800" id="donutTotalText">24</span>
+                                        <span class="text-[9px] text-slate-400 uppercase">Total</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-2.5 text-xs">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-3 h-3 rounded-sm bg-amber-500"></span>
+                                        <div>
+                                            <div class="text-[10px] text-slate-400">Day-time</div>
+                                            <div class="font-bold text-slate-800" id="donutDayCount">16 (67%)</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-3 h-3 rounded-sm bg-indigo-600"></span>
+                                        <div>
+                                            <div class="text-[10px] text-slate-400">Night-time</div>
+                                            <div class="font-bold text-slate-800" id="donutNightCount">8 (33%)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detection Frequency (Last 30 Days) -->
+                        <div class="triad-card">
+                            <span class="triad-title">Detection Frequency (Last 30 Days)</span>
+                            <div class="flex flex-col gap-2.5 mt-1">
+                                <div class="freq-bar-row">
+                                    <span class="freq-bar-label">1-3 detections</span>
+                                    <span class="freq-bar-tag">Yes</span>
+                                    <div class="freq-bar-track"><div class="freq-bar-fill" style="width:17%;"></div></div>
+                                    <span class="freq-bar-pct">17%</span>
+                                </div>
+                                <div class="freq-bar-row">
+                                    <span class="freq-bar-label">4-10 detections</span>
+                                    <span class="freq-bar-tag">Yes</span>
+                                    <div class="freq-bar-track"><div class="freq-bar-fill" style="width:29%;"></div></div>
+                                    <span class="freq-bar-pct">29%</span>
+                                </div>
+                                <div class="freq-bar-row">
+                                    <span class="freq-bar-label">11-20 detections</span>
+                                    <span class="freq-bar-tag">Yes</span>
+                                    <div class="freq-bar-track"><div class="freq-bar-fill" style="width:33%;"></div></div>
+                                    <span class="freq-bar-pct">33%</span>
+                                </div>
+                                <div class="freq-bar-row">
+                                    <span class="freq-bar-label">&gt; 20 detections</span>
+                                    <span class="freq-bar-tag">Yes</span>
+                                    <div class="freq-bar-track"><div class="freq-bar-fill" style="width:21%;"></div></div>
+                                    <span class="freq-bar-pct">21%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end tabContentTemporal -->
+
+
+                <!-- ═══════════ TAB 3: NEARBY FACILITIES ═══════════ -->
+                <div id="tabContentNearby" class="detail-tab-content p-5">
+                    <!-- Header Row -->
+                    <div class="view-header-row">
+                        <div class="view-header-left">
+                            <div class="view-header-icon bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="view-header-title">Nearby Facilities</h2>
+                                <p class="view-header-sub">Industrial infrastructure and points of interest around this source</p>
+                            </div>
+                        </div>
+                        <div class="view-header-right">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-[13px] text-slate-800" id="nearbyEventId">FIRMS-IND-2025-001</span>
+                                <span class="risk-badge high" id="nearbyRiskBadge">High Risk</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                            </div>
+                            <div class="text-[11px] text-slate-400 flex items-center gap-3 mt-1">
+                                <span class="flex items-center gap-1 text-slate-600"><i data-lucide="map-pin" class="w-3 h-3"></i> <span id="nearbyFacilitySub">Gujarat Refinery (0.22 km)</span></span>
+                                <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> <span id="nearbyTimeSub">12 May 2025, 13:30 UTC</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 Metric Cards -->
+                    <div class="temporal-kpi-grid">
+                        <!-- Nearest Industrial Facility -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="building-2" class="w-4 h-4 text-blue-600"></i>
+                                <span>Nearest Industrial Facility</span>
+                            </div>
+                            <div class="temporal-kpi-val text-blue-600" id="nearbyCardNearestDist">0.22 km</div>
+                            <div class="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                                <span id="nearbyCardNearestName">Gujarat Refinery</span> <i data-lucide="external-link" class="w-3 h-3"></i>
+                            </div>
+                        </div>
+
+                        <!-- Nearest Quarry -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="mountain" class="w-4 h-4 text-amber-600"></i>
+                                <span>Nearest Quarry</span>
+                            </div>
+                            <div class="temporal-kpi-val text-amber-600">5.8 km</div>
+                            <div class="text-[11px] font-semibold text-slate-600">Kutch Quarry</div>
+                        </div>
+
+                        <!-- Industrial Facilities (5 km) -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="factory" class="w-4 h-4 text-blue-600"></i>
+                                <span>Industrial Facilities (5 km)</span>
+                            </div>
+                            <div class="temporal-kpi-val text-slate-900">12</div>
+                            <div class="text-[10px] text-slate-400">within 5 km radius</div>
+                        </div>
+
+                        <!-- Quarries (5 km) -->
+                        <div class="temporal-kpi-card">
+                            <div class="temporal-kpi-head">
+                                <i data-lucide="pickaxe" class="w-4 h-4 text-amber-600"></i>
+                                <span>Quarries (5 km)</span>
+                            </div>
+                            <div class="temporal-kpi-val text-slate-900">3</div>
+                            <div class="text-[10px] text-slate-400">within 5 km radius</div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content 2-Column Grid -->
+                    <div class="nearby-main-grid">
+                        <!-- Left Column: Buffer Satellite Map & Context Cards -->
+                        <div class="nearby-left-col">
+                            <!-- Buffer Satellite Map -->
+                            <div class="buffer-map-card">
+                                <div class="buffer-map-view">
+                                    <div id="nearbyBufferMap"></div>
+                                    <!-- Legend Overlay -->
+                                    <div class="buffer-legend-overlay">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                            <span>Thermal Source</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="factory" class="w-3 h-3 text-cyan-400"></i>
+                                            <span>Industrial Facility</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="triangle" class="w-3 h-3 text-amber-400"></i>
+                                            <span>Quarry</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-3 border-t border-dashed border-cyan-400"></span>
+                                            <span>5 km Buffer</span>
+                                        </div>
+                                        <div class="text-[9px] text-slate-400 pt-1 border-t border-slate-700">Scale: 2 km</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sub-grid: Proximity Analysis & Land Cover Context -->
+                            <div class="nearby-sub-grid">
+                                <!-- Proximity Analysis -->
+                                <div class="asset-category-card">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="crosshair" class="w-4 h-4 text-orange-500"></i>
+                                        <span class="text-[12px] font-bold text-slate-900">Proximity Analysis</span>
+                                    </div>
+                                    <div class="flex flex-col mt-1">
+                                        <div class="proximity-item-row">
+                                            <span>Within 500 m (Industrial)</span>
+                                            <span class="status-badge-green">Yes</span>
+                                        </div>
+                                        <div class="proximity-item-row">
+                                            <span>Within 1 km (Industrial)</span>
+                                            <span class="status-badge-green">Yes</span>
+                                        </div>
+                                        <div class="proximity-item-row">
+                                            <span>Within 5 km (Industrial)</span>
+                                            <span class="status-badge-green">Yes</span>
+                                        </div>
+                                        <div class="proximity-item-row">
+                                            <span>Within 5 km (Quarry)</span>
+                                            <span class="status-badge-green">Yes</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Land Cover Context -->
+                                <div class="asset-category-card">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="layers" class="w-4 h-4 text-blue-500"></i>
+                                        <span class="text-[12px] font-bold text-slate-900">Land Cover Context (1 km radius)</span>
+                                    </div>
+                                    <!-- Segmented Stacked Bar -->
+                                    <div class="landcover-stacked-bar">
+                                        <div style="width:42%; background:#ef4444;" title="Industrial/Built-up: 42%"></div>
+                                        <div style="width:28%; background:#f59e0b;" title="Urban: 28%"></div>
+                                        <div style="width:18%; background:#10b981;" title="Vegetation: 18%"></div>
+                                        <div style="width:12%; background:#64748b;" title="Others: 12%"></div>
+                                    </div>
+                                    <div class="landcover-legend-grid">
+                                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-red-500"></span> Industrial (42%)</div>
+                                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-amber-500"></span> Urban (28%)</div>
+                                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span> Vegetation (18%)</div>
+                                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-slate-500"></span> Others (12%)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Ranked Lists of Industrial Facilities & Quarries -->
+                        <div class="nearby-right-col">
+                            <!-- Nearby Industrial Facilities -->
+                            <div class="asset-category-card">
+                                <div class="asset-category-head">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="factory" class="w-4 h-4 text-cyan-600"></i>
+                                        <span class="text-[12px] font-bold text-slate-900">Nearby Industrial Facilities</span>
+                                    </div>
+                                    <button class="text-[11px] font-semibold text-cyan-600 hover:underline">View All</button>
+                                </div>
+                                <div class="asset-items-list" id="nearbyFacilitiesList">
+                                    <!-- Injected dynamically via JS -->
+                                </div>
+                            </div>
+
+                            <!-- Nearby Quarries -->
+                            <div class="asset-category-card">
+                                <div class="asset-category-head">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="mountain" class="w-4 h-4 text-amber-600"></i>
+                                        <span class="text-[12px] font-bold text-slate-900">Nearby Quarries</span>
+                                    </div>
+                                    <button class="text-[11px] font-semibold text-amber-600 hover:underline">View All</button>
+                                </div>
+                                <div class="asset-items-list" id="nearbyQuarriesList">
+                                    <!-- Injected dynamically via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end tabContentNearby -->
+
+            </div>
+
+        </div><!-- end screenDetail -->
+
+
+        <!-- ──────────────────────────────────────────────────────────────────
+             SCREEN 5: ALERTS SYSTEM VIEW (MATCHING REFERENCE DESIGN)
+        ────────────────────────────────────────────────────────────────── -->
+        <div id="screenAlerts" class="screen-view flex-col flex-1 overflow-hidden">
+            <!-- Alerts Top Navigation Bar -->
+            <header class="alerts-topbar">
+                <!-- Search Input -->
+                <div class="alerts-search-wrap">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    <input id="alertsSearchInput" type="text" placeholder="Search alerts, locations, or facility names..." class="alerts-search-input">
+                </div>
+
+                <!-- Right Controls: Date Picker + Risk Pills + Avatar + Create Alert Rule Button -->
+                <div class="flex items-center gap-3">
+                    <!-- Date Picker -->
+                    <div class="topbar-date-picker">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>1 May 2025 - 12 May 2025</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+
+                    <!-- Risk Filter Pills (All, High, Medium, Low) -->
+                    <div id="alertsRiskFilterGroup" class="filter-pills-group text-[12px]">
+                        <button class="filter-pill active" data-risk="ALL">All</button>
+                        <button class="filter-pill" data-risk="High">High</button>
+                        <button class="filter-pill" data-risk="Medium">Medium</button>
+                        <button class="filter-pill" data-risk="Low">Low</button>
+                    </div>
+
+                    <!-- User Avatar Circle -->
+                    <div class="user-avatar-circle">AS</div>
+
+                    <!-- + Create Alert Rule CTA Button -->
+                    <button id="btnOpenCreateAlert" class="btn-primary-orange flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-[12px] font-semibold">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Create Alert Rule</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 4 KPI Summary Cards Row -->
+            <div class="alerts-kpi-grid">
+                <!-- Active Alerts -->
+                <div class="alerts-kpi-card">
+                    <div class="alerts-kpi-icon-wrap bg-red-50 text-red-500 border border-red-100">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="alerts-kpi-title">Active Alerts</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="kpiActiveAlertsVal" class="alerts-kpi-val text-red-500">27</span>
+                            <span class="alerts-kpi-trend text-red-500 font-semibold text-[11px]">
+                                <i data-lucide="arrow-up" class="w-3 h-3 inline"></i> 3 <span class="text-slate-400 font-normal">vs. previous period</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- High Risk -->
+                <div class="alerts-kpi-card">
+                    <div class="alerts-kpi-icon-wrap bg-rose-50 text-rose-600 border border-rose-100">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="alerts-kpi-title">High Risk</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="kpiHighRiskVal" class="alerts-kpi-val text-rose-600">8</span>
+                            <span class="alerts-kpi-trend text-rose-500 font-semibold text-[11px]">
+                                <i data-lucide="arrow-up" class="w-3 h-3 inline"></i> 2
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medium Risk -->
+                <div class="alerts-kpi-card">
+                    <div class="alerts-kpi-icon-wrap bg-amber-50 text-amber-500 border border-amber-100">
+                        <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="alerts-kpi-title">Medium Risk</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="kpiMedRiskVal" class="alerts-kpi-val text-amber-500">12</span>
+                            <span class="alerts-kpi-trend text-amber-500 font-semibold text-[11px]">
+                                <i data-lucide="arrow-up" class="w-3 h-3 inline"></i> 1
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Risk -->
+                <div class="alerts-kpi-card">
+                    <div class="alerts-kpi-icon-wrap bg-emerald-50 text-emerald-600 border border-emerald-100">
+                        <i data-lucide="crosshair" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="alerts-kpi-title">Low Risk</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="kpiLowRiskVal" class="alerts-kpi-val text-emerald-600">7</span>
+                            <span class="alerts-kpi-trend text-emerald-600 font-semibold text-[11px]">
+                                <i data-lucide="arrow-down" class="w-3 h-3 inline"></i> 2
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Main Split Workspace (Left: Table + Bottom Widgets, Right: Inspector Pane) -->
+            <div class="alerts-split-workspace custom-scrollbar">
+                <!-- Left 2/3 Content Column -->
+                <div class="alerts-main-col">
+                    <!-- Status Filter Tabs + Filters & Sort Bar -->
+                    <div class="alerts-filter-card">
+                        <!-- Status Tabs -->
+                        <div class="alerts-status-tabs-row">
+                            <button class="alerts-status-tab active" data-status="active">Active Alerts (<span id="countActiveTab">27</span>)</button>
+                            <button class="alerts-status-tab" data-status="acknowledged">Acknowledged (<span id="countAckTab">5</span>)</button>
+                            <button class="alerts-status-tab" data-status="resolved">Resolved (<span id="countResolvedTab">18</span>)</button>
+                        </div>
+
+                        <!-- Dropdowns Filter & Sort Row -->
+                        <div class="alerts-dropdowns-row">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <select id="selAlertRiskLevel" class="alerts-select-filter">
+                                    <option value="ALL">Risk Level</option>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                                <select id="selAlertType" class="alerts-select-filter">
+                                    <option value="ALL">Alert Type</option>
+                                    <option value="Industrial">Industrial Flare</option>
+                                    <option value="Biomass">Biomass Burning</option>
+                                    <option value="Quarry">Quarry Flare</option>
+                                </select>
+                                <select id="selSourceType" class="alerts-select-filter">
+                                    <option value="ALL">Source Type</option>
+                                    <option value="VIIRS">NASA FIRMS VIIRS</option>
+                                    <option value="MODIS">MODIS Aqua</option>
+                                </select>
+                                <select id="selState" class="alerts-select-filter">
+                                    <option value="ALL">State</option>
+                                    <option value="Gujarat">Gujarat</option>
+                                    <option value="Odisha">Odisha</option>
+                                    <option value="Tamil Nadu">Tamil Nadu</option>
+                                    <option value="Karnataka">Karnataka</option>
+                                    <option value="Telangana">Telangana</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors" id="alertsSortBtn">
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span>Sort by: <strong id="alertsSortLabel">Latest</strong></span>
+                                <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts Interactive Table -->
+                    <div class="alerts-table-wrapper">
+                        <table class="alerts-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-8"><input type="checkbox" id="selectAllAlerts" class="rounded border-slate-300"></th>
+                                    <th>ALERT</th>
+                                    <th>LOCATION</th>
+                                    <th>RISK</th>
+                                    <th>METRICS</th>
+                                    <th>DETECTED</th>
+                                    <th>STATUS</th>
+                                    <th class="w-8"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="alertsTableBody">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bottom Widgets (Timeline + Sources) -->
+                    <div class="alerts-bottom-widgets-grid">
+                        <!-- Alert Timeline (Last 7 Days) -->
+                        <div class="alerts-widget-card">
+                            <div class="text-[12px] font-bold text-slate-800 mb-3">Alert Timeline (Last 7 Days)</div>
+                            <div class="alerts-timeline-track">
+                                <div class="alerts-timeline-step">
+                                    <span class="timeline-dot bg-red-500"></span>
+                                    <span class="timeline-date">6 May</span>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="alerts-timeline-step">
+                                    <span class="timeline-dot bg-red-500"></span>
+                                    <span class="timeline-date">7 May</span>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="alerts-timeline-step">
+                                    <span class="timeline-dot bg-amber-500"></span>
+                                    <span class="timeline-date">8 May</span>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="alerts-timeline-step">
+                                    <span class="timeline-dot bg-emerald-500"></span>
+                                    <span class="timeline-date">9 May</span>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="alerts-timeline-step">
+                                    <span class="timeline-dot bg-amber-500"></span>
+                                    <span class="timeline-date">10 May</span>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="alerts-timeline-step">
+                                    <span class="timeline-dot bg-amber-500"></span>
+                                    <span class="timeline-date">11 May</span>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="alerts-timeline-step">
+                                    <span class="timeline-dot bg-red-500 ring-2 ring-red-400/30"></span>
+                                    <span class="timeline-date font-bold text-slate-700">12 May</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alert Sources Breakdown -->
+                        <div class="alerts-widget-card">
+                            <div class="text-[12px] font-bold text-slate-800 mb-3">Alert Sources</div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-500 border border-red-100">
+                                        <i data-lucide="flame" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[14px] font-bold text-slate-800">21</div>
+                                        <div class="text-[10px] text-slate-400">Thermal Sources</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 border border-blue-100">
+                                        <i data-lucide="factory" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[14px] font-bold text-slate-800">18</div>
+                                        <div class="text-[10px] text-slate-400">Industrial Proximity</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500 border border-purple-100">
+                                        <i data-lucide="mountain" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[14px] font-bold text-slate-800">6</div>
+                                        <div class="text-[10px] text-slate-400">Quarry / Mining</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
+                                        <i data-lucide="trees" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[14px] font-bold text-slate-800">3</div>
+                                        <div class="text-[10px] text-slate-400">Forest / Natural</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right 1/3 Alert Detail Inspector Column -->
+                <aside class="alerts-inspector-col">
+                    <div class="alerts-inspector-card">
+                        <!-- Header with Event ID and Badges -->
+                        <div class="p-4 border-b border-slate-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 id="insAlertEventId" class="text-[15px] font-bold text-slate-900 font-mono">FIRMS-IND-2025-001</h3>
+                                <button id="btnCloseAlertInspector" class="text-slate-400 hover:text-slate-600 p-1 rounded">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="insAlertRiskBadge" class="risk-badge high">High Risk</span>
+                                <span id="insAlertClassificationBadge" class="classification-badge">Industrial / Persistent</span>
+                            </div>
+                        </div>
+
+                        <!-- Subtabs -->
+                        <div class="detail-tabs-bar px-4 pt-2">
+                            <div class="detail-tab-item active" data-ins-tab="overview">Overview</div>
+                            <div class="detail-tab-item" data-ins-tab="location">Location</div>
+                            <div class="detail-tab-item" data-ins-tab="attribution">AI Attribution</div>
+                            <div class="detail-tab-item" data-ins-tab="data">Raw Data</div>
+                        </div>
+
+                        <!-- Inspector Scrollable Body -->
+                        <div class="p-4 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                            <!-- Satellite Zoom Map Card -->
+                            <div class="relative h-[160px] rounded-xl overflow-hidden border border-slate-200 bg-slate-900">
+                                <div id="alertInspectorMap" class="w-full h-full"></div>
+                                <button class="absolute top-2 right-2 p-1.5 bg-slate-900/70 text-white rounded hover:bg-slate-900 transition-colors" title="Expand view">
+                                    <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+
+                            <!-- Facility Title & Subtitle -->
+                            <div>
+                                <div class="flex items-center gap-1.5 text-[13px] font-bold text-slate-800">
+                                    <i data-lucide="settings" class="w-3.5 h-3.5 text-slate-500"></i>
+                                    <span id="insAlertFacility">Gujarat Refinery</span>
+                                    <i data-lucide="external-link" class="w-3 h-3 text-slate-400 cursor-pointer"></i>
+                                </div>
+                                <div id="insAlertLocationSub" class="text-[11px] text-slate-500 mt-0.5">Jamnagar, Gujarat (0.22 km)</div>
+                                <div class="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i>
+                                    <span id="insAlertTime">12 May 2025, 13:30 UTC</span>
+                                </div>
+                            </div>
+
+                            <!-- 4 Telemetry Metrics Grid -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="p-2.5 rounded-lg border border-slate-100 bg-slate-50">
+                                    <div class="flex items-center gap-1 text-[10px] text-slate-400 font-semibold uppercase">
+                                        <i data-lucide="flame" class="w-3 h-3 text-red-500"></i>
+                                        <span>FRP</span>
+                                    </div>
+                                    <div id="insAlertFrp" class="text-[14px] font-bold text-slate-800 mt-0.5">64.2 MW</div>
+                                </div>
+                                <div class="p-2.5 rounded-lg border border-slate-100 bg-slate-50">
+                                    <div class="flex items-center gap-1 text-[10px] text-slate-400 font-semibold uppercase">
+                                        <i data-lucide="activity" class="w-3 h-3 text-purple-600"></i>
+                                        <span>Detections</span>
+                                    </div>
+                                    <div id="insAlertDetections" class="text-[14px] font-bold text-slate-800 mt-0.5">24 <span class="text-[10px] text-slate-400 font-normal">(30 days)</span></div>
+                                </div>
+                                <div class="p-2.5 rounded-lg border border-slate-100 bg-slate-50">
+                                    <div class="flex items-center gap-1 text-[10px] text-slate-400 font-semibold uppercase">
+                                        <i data-lucide="shield-check" class="w-3 h-3 text-emerald-600"></i>
+                                        <span>AI Confidence</span>
+                                    </div>
+                                    <div id="insAlertConfidence" class="text-[14px] font-bold text-emerald-600 mt-0.5">94%</div>
+                                </div>
+                                <div class="p-2.5 rounded-lg border border-slate-100 bg-slate-50">
+                                    <div class="flex items-center gap-1 text-[10px] text-slate-400 font-semibold uppercase">
+                                        <i data-lucide="map-pin" class="w-3 h-3 text-cyan-600"></i>
+                                        <span>Distance</span>
+                                    </div>
+                                    <div id="insAlertDistance" class="text-[14px] font-bold text-slate-800 mt-0.5">0.22 km</div>
+                                </div>
+                            </div>
+
+                            <!-- Why this alert? Section -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[12px] font-bold text-slate-800">Why this alert?</span>
+                                    <button class="text-[11px] font-semibold text-sky-600 hover:underline">View All</button>
+                                </div>
+                                <div id="insAlertReasons" class="space-y-1.5 text-[11px]">
+                                    <!-- Dynamic Checklist items -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons at bottom -->
+                        <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+                            <button id="btnAcknowledgeAlert" class="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                <span>Acknowledge</span>
+                            </button>
+                            <button id="btnResolveAlert" class="flex-1 py-2 rounded-lg border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-colors">
+                                <i data-lucide="check-check" class="w-4 h-4"></i>
+                                <span>Resolve</span>
+                            </button>
+                            <button class="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors">
+                                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div><!-- end screenAlerts -->
+
+
+        <!-- ──────────────────────────────────────────────────────────────────
+             SCREEN 3: ANALYTICS VIEW
+        ────────────────────────────────────────────────────────────────── -->
+        <div id="screenAnalytics" class="screen-view flex-col flex-1 p-6 overflow-y-auto custom-scrollbar">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900" style="font-family:'Space Grotesk',sans-serif;">Thermal Analytics & Attributions</h2>
+                    <p class="text-xs text-slate-500">Distribution analysis, FRP radiometry histograms, and spatial correlation scatter plots.</p>
+                </div>
+                <button class="btn-secondary-outline" onclick="document.getElementById('navMap').click()">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>Back to Explorer</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Attribution Breakdown -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3">Attribution Breakdown</h3>
+                    <div class="h-[260px] relative">
+                        <canvas id="chartAttributionPie"></canvas>
+                    </div>
+                </div>
+
+                <!-- FRP Distribution -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3">FRP Radiative Intensity Histogram</h3>
+                    <div class="h-[260px] relative">
+                        <canvas id="chartFrpHist"></canvas>
+                    </div>
+                </div>
+
+                <!-- Scatter Correlation -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-2">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3">Proximity vs FRP Intensity Correlation</h3>
+                    <div class="h-[300px] relative">
+                        <canvas id="chartScatter"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div><!-- end screenAnalytics -->
+
+
+        <!-- ──────────────────────────────────────────────────────────────────
+             SCREEN 4: DATA TELEMETRY GRID VIEW
+        ────────────────────────────────────────────────────────────────── -->
+        <div id="screenData" class="screen-view flex-col flex-1 p-6 overflow-y-auto custom-scrollbar">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900" style="font-family:'Space Grotesk',sans-serif;">Raw Satellite Observations & Predictions</h2>
+                    <p class="text-xs text-slate-500">Full telemetry log ingested from NASA FIRMS VIIRS sensor and classified via XGBoost.</p>
+                </div>
+                <button class="btn-secondary-outline" onclick="document.getElementById('navMap').click()">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>Back to Explorer</span>
+                </button>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
                         <thead>
-                            <tr>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Event ID</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Classification</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Confidence</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Coordinates</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">FRP (MW)</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Nearest Facility</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Distance</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">30d Hits</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Land Cover</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Acq Date</th>
-                                <th class="sticky top-0 bg-brand-panel text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2 border-b border-brand-border z-10">Action</th>
+                            <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                                <th class="p-3">Event ID</th>
+                                <th class="p-3">Risk / Class</th>
+                                <th class="p-3">Confidence</th>
+                                <th class="p-3">Coordinates</th>
+                                <th class="p-3">FRP</th>
+                                <th class="p-3">Nearest Facility</th>
+                                <th class="p-3">Distance</th>
+                                <th class="p-3">30d Hits</th>
+                                <th class="p-3">Land Cover</th>
+                                <th class="p-3">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody"></tbody>
+                        <tbody id="tableBody" class="divide-y divide-slate-100">
+                            <!-- Injected by JS -->
+                        </tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- VIEW 3: ANALYTICS -->
-            <div id="viewAnalyticsContainer" class="view-panel absolute inset-0 overflow-y-auto custom-scrollbar">
-                <div class="p-4 grid grid-cols-2 gap-3.5">
-
-                    <div class="bg-brand-panel border border-brand-border rounded-xl p-4 flex flex-col gap-2.5">
-                        <div>
-                            <h4 class="text-[13px] font-semibold text-white" style="font-family:'Space Grotesk',sans-serif;">Attribution Distribution</h4>
-                            <span class="text-[11px] text-slate-500">Industrial vs Natural Sources</span>
-                        </div>
-                        <div class="relative h-[220px]"><canvas id="chartAttributionPie"></canvas></div>
-                    </div>
-
-                    <div class="bg-brand-panel border border-brand-border rounded-xl p-4 flex flex-col gap-2.5">
-                        <div>
-                            <h4 class="text-[13px] font-semibold text-white" style="font-family:'Space Grotesk',sans-serif;">FRP Intensity Profile</h4>
-                            <span class="text-[11px] text-slate-500">Fire Radiative Power Distribution (MW)</span>
-                        </div>
-                        <div class="relative h-[220px]"><canvas id="chartFrpHist"></canvas></div>
-                    </div>
-
-                    <div class="col-span-2 bg-brand-panel border border-brand-border rounded-xl p-4 flex flex-col gap-2.5">
-                        <div>
-                            <h4 class="text-[13px] font-semibold text-white" style="font-family:'Space Grotesk',sans-serif;">Proximity vs Radiative Power Correlation</h4>
-                            <span class="text-[11px] text-slate-500">Distance to Nearest Facility (km) vs FRP Intensity (MW)</span>
-                        </div>
-                        <div class="relative h-[220px]"><canvas id="chartScatter"></canvas></div>
-                    </div>
-
-                </div>
-            </div>
-
-        </section><!-- end center viewport -->
-
-        <!-- ─── RIGHT INSPECTOR PANEL ─── -->
-        <aside id="inspectorPanel"
-               class="w-[360px] shrink-0 bg-brand-panel border-l border-brand-border flex flex-col z-20 transition-[margin] duration-[250ms]">
-
-            <div class="px-3.5 py-2.5 border-b border-brand-border flex items-center justify-between shrink-0">
-                <span class="flex items-center gap-1.5 text-[12px] font-semibold text-orange-600 uppercase tracking-wide" style="font-family:'Space Grotesk',sans-serif;">
-                    <i data-lucide="cpu" class="w-3.5 h-3.5"></i> AI Attribution Inspector
-                </span>
-                <button id="btnCloseInspector"
-                        class="p-1 rounded text-slate-500 hover:text-white hover:bg-brand-dark transition-colors">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-
-            <!-- Empty State -->
-            <div id="inspectorEmptyState" class="flex-1 flex flex-col items-center justify-center p-8 text-center gap-3 text-slate-500">
-                <div class="w-11 h-11 rounded-lg bg-brand-dark border border-brand-border flex items-center justify-center text-slate-600">
-                    <i data-lucide="radar" class="w-5 h-5"></i>
-                </div>
-                <h4 class="text-sm font-semibold text-slate-300">No Event Selected</h4>
-                <p class="text-[11px] leading-relaxed text-slate-500">Click on any map marker or table row to view attribution certainty, spatial proximity context, and satellite observations.</p>
-            </div>
-
-            <!-- Inspector Content -->
-            <div id="inspectorContent" class="hidden flex-1 overflow-y-auto custom-scrollbar p-3.5 flex flex-col gap-3.5">
-
-                <!-- Verdict Card -->
-                <div id="verdictBanner" class="bg-brand-card border border-orange-500/45 rounded-xl p-3.5 flex flex-col gap-3">
-                    <div class="flex items-center justify-between">
-                        <span id="verdictClassTag"
-                              class="verdict-badge text-[11px] font-bold px-2.5 py-1 rounded-md bg-orange-500 text-white tracking-wide" style="font-family:'Space Grotesk',sans-serif;">INDUSTRIAL</span>
-                        <span id="verdictEventId" class="font-mono text-[10px] text-slate-500 bg-brand-dark px-2 py-0.5 rounded border border-brand-border">--</span>
-                    </div>
-                    <!-- Confidence bar - tall, glowing -->
-                    <div class="flex flex-col gap-1.5">
-                        <div class="confidence-track">
-                            <div id="verdictProgressFill" class="confidence-fill" style="width:0%"></div>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span id="verdictProbText" class="text-[13px] font-bold text-white" style="font-family:'Space Grotesk',sans-serif;">--% Certainty</span>
-                            <span id="verdictProbLabel" class="text-[10px] text-slate-500 font-mono">XGBoost v1</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Spatial Context -->
-                <div class="inspector-block-wrap">
-                    <div class="inspector-block-title flex items-center justify-between">
-                        <span class="flex items-center gap-1.5 font-semibold text-[12px] text-slate-200">
-                            <i data-lucide="navigation" class="w-3.5 h-3.5 text-cyan-400"></i> Spatial Proximity Context
-                        </span>
-                        <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wide">GIS Proximity</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2.5 mt-2">
-                        <div class="spec-card spec-card-cyan">
-                            <div class="spec-card-header">
-                                <i data-lucide="factory" class="w-3 h-3 text-cyan-400 shrink-0"></i>
-                                <span class="spec-card-label">Nearest Facility</span>
-                            </div>
-                            <strong id="detFacility" class="spec-card-val text-cyan-400 truncate" title="Facility Name">--</strong>
-                        </div>
-                        <div class="spec-card spec-card-amber">
-                            <div class="spec-card-header">
-                                <i data-lucide="ruler" class="w-3 h-3 text-amber-400 shrink-0"></i>
-                                <span class="spec-card-label">Distance</span>
-                            </div>
-                            <strong id="detDistance" class="spec-card-val text-white font-mono">--</strong>
-                        </div>
-                        <div class="spec-card spec-card-emerald">
-                            <div class="spec-card-header">
-                                <i data-lucide="trees" class="w-3 h-3 text-emerald-400 shrink-0"></i>
-                                <span class="spec-card-label">Land Cover</span>
-                            </div>
-                            <strong id="detLandCover" class="spec-card-val text-slate-200 truncate" title="Land Cover">--</strong>
-                        </div>
-                        <div class="spec-card spec-card-orange">
-                            <div class="spec-card-header">
-                                <i data-lucide="activity" class="w-3 h-3 text-orange-400 shrink-0"></i>
-                                <span class="spec-card-label">30d Recurrence</span>
-                            </div>
-                            <strong id="det30dCount" class="spec-card-val text-orange-400 font-mono">--</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Satellite Telemetry -->
-                <div class="inspector-block-wrap">
-                    <div class="inspector-block-title">
-                        <i data-lucide="satellite" class="w-3.5 h-3.5"></i> NASA VIIRS Satellite Data
-                    </div>
-                    <div class="kv-table-enhanced">
-                        <div class="kv-row-enhanced">
-                            <span class="kv-row-icon"><i data-lucide="crosshair" class="w-3 h-3"></i></span>
-                            <span class="kv-key">Coordinates</span>
-                            <strong id="detCoordinates" class="kv-val font-mono">--</strong>
-                        </div>
-                        <div class="kv-row-enhanced kv-row-alt">
-                            <span class="kv-row-icon"><i data-lucide="zap" class="w-3 h-3"></i></span>
-                            <span class="kv-key">FRP Intensity</span>
-                            <strong id="detFrp" class="kv-val text-orange-600">--</strong>
-                        </div>
-                        <div class="kv-row-enhanced">
-                            <span class="kv-row-icon"><i data-lucide="thermometer" class="w-3 h-3"></i></span>
-                            <span class="kv-key">Brightness Temp</span>
-                            <strong id="detBt" class="kv-val">--</strong>
-                        </div>
-                        <div class="kv-row-enhanced kv-row-alt">
-                            <span class="kv-row-icon"><i data-lucide="clock" class="w-3 h-3"></i></span>
-                            <span class="kv-key">Acquisition Time</span>
-                            <strong id="detAcqTime" class="kv-val">--</strong>
-                        </div>
-                        <div class="kv-row-enhanced">
-                            <span class="kv-row-icon"><i data-lucide="radio" class="w-3 h-3"></i></span>
-                            <span class="kv-key">Platform &amp; Orbit</span>
-                            <strong id="detSatOrbit" class="kv-val">--</strong>
-                        </div>
-                        <div class="kv-row-enhanced kv-row-alt" style="border-bottom:none;">
-                            <span class="kv-row-icon"><i data-lucide="shield" class="w-3 h-3"></i></span>
-                            <span class="kv-key">Quality Score</span>
-                            <strong id="detConfidence" class="kv-val text-emerald-600">--</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="flex flex-col gap-2 mt-1">
-                    <button id="btnZoomToMap"
-                            class="inspector-action-btn inspector-action-btn-primary">
-                        <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i> Center Anomaly on Map
-                    </button>
-                    <button id="btnCopyGeoJson"
-                            class="inspector-action-btn inspector-action-btn-ghost">
-                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Feature GeoJSON
-                    </button>
-                </div>
-
-            </div><!-- end inspector content -->
-        </aside><!-- end right inspector -->
+        </div><!-- end screenData -->
 
     </main>
 
-    <!-- ═══════════════════════════════════════════════════
-         SIMULATION MODAL
-    ═══════════════════════════════════════════════════ -->
-    <div id="simulateModal"
-         class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-brand-panel border border-brand-borderLight rounded-xl w-full max-w-[480px] shadow-2xl flex flex-col overflow-hidden">
-
-            <div class="px-4 py-3 border-b border-brand-border flex items-center justify-between">
-                <h3 class="flex items-center gap-2 text-sm font-semibold text-orange-500" style="font-family:'Space Grotesk',sans-serif;">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i> Simulate Custom Thermal Event
-                </h3>
-                <button id="btnCloseSimModal" class="text-slate-500 hover:text-white transition-colors">
+    <!-- ══════════════════════════════════════════════════════════════════════════
+         MODAL: CREATE ALERT RULE
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <div id="createAlertModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100">
+                        <i data-lucide="bell-plus" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Create Alert Rule</h3>
+                        <p class="text-[11px] text-slate-400">Automate notifications for anomalous thermal activity</p>
+                    </div>
+                </div>
+                <button id="btnCloseAlertModal" class="p-1 rounded text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <form id="simForm">
-                <div class="p-4 flex flex-col gap-3">
-                    <p class="text-[11px] text-slate-400 leading-relaxed">
-                        Specify custom observation coordinates. ThermaSight AI will match nearby industrial nodes, calculate recurrence, and output instant source attribution.
-                    </p>
+            <form id="createAlertForm" class="p-5 space-y-3.5">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Rule Name</label>
+                    <input id="alertRuleName" type="text" required placeholder="e.g. Critical Petrochemical Flare Warning" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-orange-500">
+                </div>
 
-                    <div class="grid grid-cols-2 gap-2.5">
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide" for="simLat">Latitude (°N)</label>
-                            <input id="simLat" type="number" step="0.0001" value="22.3072" required
-                                   class="bg-brand-dark border border-brand-border rounded-lg py-1.5 px-2.5 text-[12px] text-slate-200 focus:outline-none focus:border-orange-500 transition-colors">
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide" for="simLon">Longitude (°E)</label>
-                            <input id="simLon" type="number" step="0.0001" value="73.1812" required
-                                   class="bg-brand-dark border border-brand-border rounded-lg py-1.5 px-2.5 text-[12px] text-slate-200 focus:outline-none focus:border-orange-500 transition-colors">
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide" for="simFrp">FRP (MW)</label>
-                            <input id="simFrp" type="number" step="0.1" value="45.0" required
-                                   class="bg-brand-dark border border-brand-border rounded-lg py-1.5 px-2.5 text-[12px] text-slate-200 focus:outline-none focus:border-orange-500 transition-colors">
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide" for="simBt">Brightness Temp (K)</label>
-                            <input id="simBt" type="number" step="0.1" value="350.0" required
-                                   class="bg-brand-dark border border-brand-border rounded-lg py-1.5 px-2.5 text-[12px] text-slate-200 focus:outline-none focus:border-orange-500 transition-colors">
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide" for="simLandCover">Land Cover Type</label>
-                            <select id="simLandCover"
-                                    class="bg-brand-dark border border-brand-border rounded-lg py-1.5 px-2.5 text-[12px] text-slate-200 focus:outline-none focus:border-orange-500 transition-colors cursor-pointer">
-                                <option value="Built-up / Industrial">Built-up / Industrial Zone</option>
-                                <option value="Tree cover / Forest">Tree cover / Forest</option>
-                                <option value="Cropland">Cropland / Agricultural</option>
-                                <option value="Grassland / Shrubland">Grassland / Shrubland</option>
-                            </select>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide" for="simSatellite">Satellite Sensor</label>
-                            <select id="simSatellite"
-                                    class="bg-brand-dark border border-brand-border rounded-lg py-1.5 px-2.5 text-[12px] text-slate-200 focus:outline-none focus:border-orange-500 transition-colors cursor-pointer">
-                                <option value="VIIRS_SNPP">VIIRS SNPP</option>
-                                <option value="VIIRS_NOAA20">VIIRS NOAA-20</option>
-                                <option value="MODIS_AQUA">MODIS Aqua</option>
-                            </select>
-                        </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Min. FRP (MW)</label>
+                        <input id="alertRuleFrp" type="number" step="0.1" value="50.0" required class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Min. Detections (30d)</label>
+                        <input id="alertRuleDetections" type="number" value="10" required class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-orange-500">
                     </div>
                 </div>
 
-                <div class="px-4 py-3 bg-brand-dark border-t border-brand-border flex justify-end gap-2">
-                    <button type="button" id="btnCancelSim"
-                            class="px-3 py-1.5 rounded-lg bg-brand-panel border border-brand-border text-[11px] font-semibold text-slate-300 hover:bg-brand-panel/80 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-semibold transition-colors">
-                        <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Run Attribution Model
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Target Facility</label>
+                        <select id="alertRuleFacility" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-orange-500">
+                            <option value="Industrial Facilities">Industrial Facilities</option>
+                            <option value="Refineries">Refineries</option>
+                            <option value="Quarries">Quarries</option>
+                            <option value="Protected Forests">Protected Forests</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Max Distance (km)</label>
+                        <input id="alertRuleDistance" type="number" step="0.1" value="1.0" required class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <button type="button" id="btnCancelAlertModal" class="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Save Alert Rule</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-</div><!-- end app root -->
-
-<!-- Scripts -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js"></script>
+    <!-- Application Script -->
+    <script src="js/app.js"></script>
 </body>
 </html>

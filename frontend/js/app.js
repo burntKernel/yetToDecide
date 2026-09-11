@@ -1,6 +1,9 @@
 /* ==========================================================================
-   ThermaSight AI - SIH Thermal Anomaly Source Attribution Dashboard Logic
-   Vibrant GIS Cartography, Live Satellite Stream Polling & AI Telemetry
+   ThermaSight AI - Reference Design UI Logic
+   Screen 1 (Map Explorer) & Screen 2 (Event Detail Multi-Tab Inspector)
+   - Overview
+   - Temporal Behaviour (Dual-axis Timeline, Diurnal Matrix, Day/Night Donut)
+   - Nearby Facilities (Satellite Buffer Map with Concentric Rings, Asset Lists)
    ========================================================================== */
 
 (function () {
@@ -26,14 +29,30 @@
         { name: "Visakhapatnam Steel & Port Zone", lat: 17.6868, lon: 83.2185, type: "Industrial Port" }
     ];
 
-    // Standalone Mock Dataset
+    // Nearby facilities dataset for reference detail view
+    const NEARBY_FACILITIES_DATA = [
+        { name: "Gujarat Refinery", type: "Petroleum Refinery", dist: "0.22 km", icon: "factory", latOffset: 0.002, lonOffset: -0.001 },
+        { name: "Reliance Petrochemicals", type: "Chemical Plant", dist: "1.4 km", icon: "flask-conical", latOffset: -0.009, lonOffset: 0.008 },
+        { name: "Essar Oil Terminal", type: "Oil Terminal", dist: "2.8 km", icon: "container", latOffset: 0.018, lonOffset: -0.015 },
+        { name: "Mundra Industrial Area", type: "Industrial Zone", dist: "3.6 km", icon: "warehouse", latOffset: -0.024, lonOffset: -0.022 },
+        { name: "Adani Port Complex", type: "Port / Industrial", dist: "4.9 km", icon: "anchor", latOffset: 0.035, lonOffset: 0.028 }
+    ];
+
+    // Nearby quarries dataset for reference detail view
+    const NEARBY_QUARRIES_DATA = [
+        { name: "Kutch Quarry", type: "Stone Quarry", dist: "5.8 km", icon: "mountain", latOffset: -0.042, lonOffset: -0.038 },
+        { name: "Banni Mining Area", type: "Limestone Quarry", dist: "7.2 km", icon: "pickaxe", latOffset: 0.052, lonOffset: -0.048 },
+        { name: "Rapar Quarry", type: "Stone Quarry", dist: "9.1 km", icon: "mountain", latOffset: -0.065, lonOffset: 0.058 }
+    ];
+
+    // Standalone Mock Dataset matching reference design
     const MOCK_EVENTS = [
         {
             "event_id": "FIRMS-IND-2025-001",
             "latitude": 22.3087,
             "longitude": 73.1826,
-            "acq_date": "2025-05-12",
-            "acq_time": "1330",
+            "acq_date": "12 May 2025",
+            "acq_time": "13:30",
             "satellite": "VIIRS_SNPP",
             "frp": 64.2,
             "brightness_temperature": 358.4,
@@ -41,8 +60,11 @@
             "daynight": "N",
             "classification": "INDUSTRIAL",
             "prediction_probability": 0.942,
+            "risk_level": "High Risk",
             "model_version": "xgboost_v1_prototype",
-            "nearest_industrial_facility": "Gujarat Refinery Petrochemical Complex",
+            "nearest_industrial_facility": "Gujarat Refinery",
+            "facility_full": "Gujarat Refinery Petrochemical Complex",
+            "region": "Gujarat, Western India",
             "industrial_distance_km": 0.22,
             "industrial_nearby": true,
             "hotspot_count_7d": 5,
@@ -50,119 +72,134 @@
             "hotspot_count_90d": 71,
             "land_cover": "Built-up / Industrial",
             "reasons": [
-                "Industrial facility within 300m (0.22 km distance)",
+                "Within 300 m of industrial facility",
                 "High temporal persistence (24 detections in 30 days)",
-                "Elevated FRP thermal flare signature (64.2 MW)",
-                "Built-up / Industrial land cover category"
+                "Elevated FRP thermal signature (64.2 MW)",
+                "Located in built-up / industrial area"
             ]
         },
         {
             "event_id": "FIRMS-IND-2025-002",
+            "latitude": 22.4717,
+            "longitude": 69.8388,
+            "acq_date": "12 May 2025",
+            "acq_time": "11:20",
+            "satellite": "VIIRS_SNPP",
+            "frp": 52.6,
+            "brightness_temperature": 348.1,
+            "confidence": "high",
+            "daynight": "D",
+            "classification": "INDUSTRIAL",
+            "prediction_probability": 0.895,
+            "risk_level": "Medium Risk",
+            "model_version": "xgboost_v1_prototype",
+            "nearest_industrial_facility": "Near Industrial Area",
+            "facility_full": "Jamnagar Petroleum Refinery (RIL)",
+            "region": "Jamnagar, Gujarat",
+            "industrial_distance_km": 1.1,
+            "industrial_nearby": true,
+            "hotspot_count_7d": 4,
+            "hotspot_count_30d": 16,
+            "hotspot_count_90d": 45,
+            "land_cover": "Industrial Buffer Zone",
+            "reasons": [
+                "Within 1.1 km of mega refinery complex",
+                "Moderate temporal recurrence (16 detections in 30 days)",
+                "Stable elevated thermal signature",
+                "Proximity to petrochemical processing units"
+            ]
+        },
+        {
+            "event_id": "FIRMS-NAT-2025-003",
             "latitude": 30.0668,
             "longitude": 79.0193,
-            "acq_date": "2025-05-14",
-            "acq_time": "0815",
+            "acq_date": "12 May 2025",
+            "acq_time": "09:15",
             "satellite": "VIIRS_SNPP",
-            "frp": 12.8,
+            "frp": 14.2,
             "brightness_temperature": 322.1,
             "confidence": "nominal",
             "daynight": "D",
             "classification": "NATURAL",
             "prediction_probability": 0.965,
+            "risk_level": "Low Risk",
             "model_version": "xgboost_v1_prototype",
             "nearest_industrial_facility": "Garhwal Hydro Station",
+            "facility_full": "Garhwal Hydro Station",
+            "region": "Garhwal Himalayas, Uttarakhand",
             "industrial_distance_km": 14.85,
             "industrial_nearby": false,
-            "hotspot_count_7d": 2,
+            "hotspot_count_7d": 1,
             "hotspot_count_30d": 2,
             "hotspot_count_90d": 3,
-            "land_cover": "Tree cover / Forest",
+            "land_cover": "Forest Area",
             "reasons": [
                 "No industrial infrastructure within 5 km (nearest 14.85 km)",
-                "Transient thermal activity (2 detections in 30 days)",
-                "Forest land cover classification (Wildfire signature)",
-                "Nominal FRP and brightness profile"
-            ]
-        },
-        {
-            "event_id": "FIRMS-IND-2025-003",
-            "latitude": 20.8908,
-            "longitude": 85.1538,
-            "acq_date": "2025-05-18",
-            "acq_time": "0210",
-            "satellite": "VIIRS_SNPP",
-            "frp": 88.5,
-            "brightness_temperature": 367.9,
-            "confidence": "high",
-            "daynight": "N",
-            "classification": "INDUSTRIAL",
-            "prediction_probability": 0.918,
-            "model_version": "xgboost_v1_prototype",
-            "nearest_industrial_facility": "Angul Steel & Thermal Power Hub",
-            "industrial_distance_km": 0.41,
-            "industrial_nearby": true,
-            "hotspot_count_7d": 7,
-            "hotspot_count_30d": 31,
-            "hotspot_count_90d": 89,
-            "land_cover": "Built-up",
-            "reasons": [
-                "Industrial facility within 500m (0.41 km distance)",
-                "High temporal persistence (31 detections in 30 days)",
-                "Extreme thermal intensity (88.5 MW FRP flare)"
+                "Transient wildfire signature with low persistence",
+                "High NDVI dense tree cover classification",
+                "Nominal FRP radiative output"
             ]
         },
         {
             "event_id": "FIRMS-IND-2025-004",
-            "latitude": 30.9010,
-            "longitude": 75.8573,
-            "acq_date": "2025-10-25",
-            "acq_time": "1245",
+            "latitude": 20.8908,
+            "longitude": 85.1538,
+            "acq_date": "12 May 2025",
+            "acq_time": "08:40",
             "satellite": "VIIRS_SNPP",
-            "frp": 28.4,
-            "brightness_temperature": 338.2,
-            "confidence": "nominal",
+            "frp": 48.0,
+            "brightness_temperature": 342.5,
+            "confidence": "high",
             "daynight": "D",
-            "classification": "NATURAL",
-            "prediction_probability": 0.884,
+            "classification": "INDUSTRIAL",
+            "prediction_probability": 0.880,
+            "risk_level": "Medium Risk",
             "model_version": "xgboost_v1_prototype",
-            "nearest_industrial_facility": "Ludhiana Textile Zone",
-            "industrial_distance_km": 8.12,
-            "industrial_nearby": false,
+            "nearest_industrial_facility": "Quarry Region",
+            "facility_full": "Angul Steel & Thermal Power Hub",
+            "region": "Angul, Odisha",
+            "industrial_distance_km": 0.8,
+            "industrial_nearby": true,
             "hotspot_count_7d": 3,
-            "hotspot_count_30d": 4,
-            "hotspot_count_90d": 4,
-            "land_cover": "Cropland",
+            "hotspot_count_30d": 14,
+            "hotspot_count_90d": 38,
+            "land_cover": "Mining & Industrial Zone",
             "reasons": [
-                "Cropland land cover context (Seasonal stubble burn signature)",
-                "No industrial infrastructure within 5 km",
-                "Short duration cluster without long-term persistence"
+                "Within 800 m of heavy metallurgical steel works",
+                "Consistent cluster detections over 30 days",
+                "High radiative flux in slag cooling area",
+                "Confirmed active industrial zoning"
             ]
         },
         {
-            "event_id": "FIRMS-IND-2025-005",
-            "latitude": 22.4717,
-            "longitude": 69.8388,
-            "acq_date": "2025-06-01",
-            "acq_time": "2310",
+            "event_id": "FIRMS-NAT-2025-005",
+            "latitude": 30.9010,
+            "longitude": 75.8573,
+            "acq_date": "12 May 2025",
+            "acq_time": "07:15",
             "satellite": "VIIRS_SNPP",
-            "frp": 95.0,
-            "brightness_temperature": 372.4,
-            "confidence": "high",
-            "daynight": "N",
-            "classification": "INDUSTRIAL",
-            "prediction_probability": 0.981,
+            "frp": 22.1,
+            "brightness_temperature": 331.0,
+            "confidence": "nominal",
+            "daynight": "D",
+            "classification": "NATURAL",
+            "prediction_probability": 0.912,
+            "risk_level": "Low Risk",
             "model_version": "xgboost_v1_prototype",
-            "nearest_industrial_facility": "Jamnagar Petroleum Refinery (RIL)",
-            "industrial_distance_km": 0.15,
-            "industrial_nearby": true,
-            "hotspot_count_7d": 9,
-            "hotspot_count_30d": 42,
-            "hotspot_count_90d": 115,
-            "land_cover": "Built-up / Industrial",
+            "nearest_industrial_facility": "Ludhiana Textile Zone",
+            "facility_full": "Ludhiana Textile Industrial Area",
+            "region": "Punjab Agrarian Basin",
+            "industrial_distance_km": 8.12,
+            "industrial_nearby": false,
+            "hotspot_count_7d": 2,
+            "hotspot_count_30d": 3,
+            "hotspot_count_90d": 4,
+            "land_cover": "Cropland / Agrarian",
             "reasons": [
-                "Industrial flare stack located within 150m (0.15 km)",
-                "Continuous high temporal recurrence (42 detections / 30d)",
-                "Very high radiative flare intensity (95.0 MW FRP)"
+                "Seasonal crop residue burning profile",
+                "Greater than 8 km from industrial facility",
+                "Non-persistent short-duration thermal flare",
+                "Open agricultural parcel land cover"
             ]
         }
     ];
@@ -172,31 +209,38 @@
         filteredEvents: [],
         stats: null,
         selectedEventId: null,
-        activeView: 'map',
+        activeScreen: 'map', // 'map', 'detail', 'analytics', 'data'
+        activeDetailTab: 'overview', // 'overview', 'temporal', 'nearby', 'data'
         activeTileLayer: 'street',
-        autoSyncInterval: null,
-        isLivePolling: true,
+        detailTileLayer: 'street',
         filters: {
             search: '',
-            classification: 'ALL',
-            minFrp: 0,
-            minConfidence: 0.5,
-            industrialOnly: false,
-            recurrence: 'all'
+            classification: 'ALL'
         },
-        layers: {
-            industrialNodes: true,
-            bufferRings: true,
-            frpPulse: true
+        currentSort: 'risk', // 'risk', 'frp', 'distance'
+        alerts: [],
+        selectedAlertId: 'FIRMS-IND-2025-001',
+        alertsFilters: {
+            status: 'active', // 'active', 'acknowledged', 'resolved'
+            risk: 'ALL',      // 'ALL', 'High', 'Medium', 'Low'
+            search: '',
+            type: 'ALL',
+            source: 'ALL',
+            state: 'ALL',
+            sort: 'latest'
         }
     };
 
-    let map = null;
-    let tileLayers = {};
-    let markersLayerGroup = null;
-    let facilityLayerGroup = null;
-    let bufferRingsGroup = null;
-    let proximityVectorLayer = null;
+    let mainMap = null;
+    let detailMap = null;
+    let nearbyBufferMap = null;
+    let mainTileLayers = {};
+    let detailTileLayers = {};
+    let nearbyTileLayers = {};
+    let mainMarkersLayer = null;
+    let mainFacilitiesLayer = null;
+    let detailMarkerLayer = null;
+    let alertInspectorMarkerLayer = null;
     let charts = {};
 
     // ----------------------------------------------------------------------
@@ -204,10 +248,13 @@
     // ----------------------------------------------------------------------
     document.addEventListener('DOMContentLoaded', () => {
         initLucideIcons();
-        initMap();
+        initSidebarCollapse();
+        initMainMap();
         initEventListeners();
+        initAlertsData();
+        initAlertsEventListeners();
+        initTheme();
         loadDashboardData();
-        startAutoSyncPolling();
     });
 
     function initLucideIcons() {
@@ -217,595 +264,1177 @@
     }
 
     // ----------------------------------------------------------------------
-    // 3. LEAFLET MAP INITIALIZATION (HIGH VISIBILITY TILE LAYERS)
+    // 2.1 SIDEBAR MINIMIZE / COLLAPSE CONTROLLER
     // ----------------------------------------------------------------------
-    function initMap() {
+    function initSidebarCollapse() {
+        const sidebar = document.getElementById('appSidebar');
+        const toggleBtn = document.getElementById('btnToggleSidebar');
+        const themeToggle = document.querySelector('.sidebar-theme-toggle');
+        const isCollapsed = localStorage.getItem('thermasight_sidebar_collapsed') === 'true';
+
+        if (sidebar && isCollapsed) {
+            setSidebarCollapsed(true, false);
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const willCollapse = !sidebar.classList.contains('collapsed');
+                setSidebarCollapsed(willCollapse, true);
+            });
+        }
+
+        // Allow clicking theme toggle in collapsed mode to switch themes
+        if (themeToggle) {
+            themeToggle.addEventListener('click', (e) => {
+                if (sidebar && sidebar.classList.contains('collapsed')) {
+                    const checkbox = document.getElementById('themeToggleCheckbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                }
+            });
+        }
+
+        // Keyboard shortcut: Ctrl + B / Cmd + B
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                const target = e.target;
+                if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+                    return;
+                }
+                e.preventDefault();
+                if (sidebar) {
+                    const willCollapse = !sidebar.classList.contains('collapsed');
+                    setSidebarCollapsed(willCollapse, true);
+                }
+            }
+        });
+    }
+
+    function setSidebarCollapsed(collapsed, notify = false) {
+        const sidebar = document.getElementById('appSidebar');
+        const toggleBtn = document.getElementById('btnToggleSidebar');
+        if (!sidebar) return;
+
+        if (collapsed) {
+            sidebar.classList.add('collapsed');
+            if (toggleBtn) {
+                toggleBtn.setAttribute('title', 'Expand sidebar (Ctrl+B)');
+                toggleBtn.innerHTML = '<i data-lucide="panel-left-open" class="w-4 h-4"></i>';
+            }
+            localStorage.setItem('thermasight_sidebar_collapsed', 'true');
+            if (notify) showToast('Sidebar minimized (Press Ctrl+B to expand)', 'info');
+        } else {
+            sidebar.classList.remove('collapsed');
+            if (toggleBtn) {
+                toggleBtn.setAttribute('title', 'Collapse sidebar (Ctrl+B)');
+                toggleBtn.innerHTML = '<i data-lucide="panel-left-close" class="w-4 h-4"></i>';
+            }
+            localStorage.setItem('thermasight_sidebar_collapsed', 'false');
+        }
+
+        initLucideIcons();
+
+        // Invalidate map sizes after transition completes so maps smoothly fill full width
+        setTimeout(() => {
+            if (mainMap) mainMap.invalidateSize();
+            if (detailMap) detailMap.invalidateSize();
+            if (nearbyBufferMap) nearbyBufferMap.invalidateSize();
+            if (alertInspectorMap) alertInspectorMap.invalidateSize();
+            window.dispatchEvent(new Event('resize'));
+        }, 240);
+    }
+
+    // ----------------------------------------------------------------------
+    // 3. MAIN MAP (LEAFLET)
+    // ----------------------------------------------------------------------
+    function initMainMap() {
         const mapContainer = document.getElementById('map');
         if (!mapContainer) return;
 
-        // Fully interactive map: smooth mouse scroll zoom, hold-and-drag panning, keyboard navigation
-        map = L.map('map', {
+        mainMap = L.map('map', {
             center: DEFAULT_CENTER,
             zoom: DEFAULT_ZOOM,
             zoomControl: false,
+            attributionControl: false,
             dragging: true,
             scrollWheelZoom: true,
             doubleClickZoom: true,
             boxZoom: true,
-            keyboard: true,
-            touchZoom: true,
-            wheelDebounceTime: 40,
-            wheelPxPerZoomLevel: 60,
-            tap: true
+            keyboard: true
         });
 
-        // Zoom control at bottom right
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        // Metric scale bar at bottom left (UX Life Improvement)
-        L.control.scale({
-            metric: true,
-            imperial: false,
-            position: 'bottomleft'
-        }).addTo(map);
-
-        // OpenStreetMap (Street View) — DEFAULT MAP
-        tileLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19,
-            detectRetina: true
+        // 100% Free OpenStreetMap Standard Street Basemap (No API key required, no watermarks, no hover notices)
+        mainTileLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            subdomains: ['a', 'b', 'c'],
+            maxZoom: 19
         });
 
-        // Esri World Imagery (Satellite View)
-        tileLayers.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
+        // Dark Matter Basemap
+        mainTileLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 19
+        });
+
+        // Satellite Basemap
+        mainTileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 18
         });
 
-        // Street View is the active default base layer
-        tileLayers.street.addTo(map);
+        mainTileLayers.street.addTo(mainMap);
 
-        bufferRingsGroup = L.layerGroup().addTo(map);
-        facilityLayerGroup = L.layerGroup().addTo(map);
-        markersLayerGroup = L.layerGroup().addTo(map);
-
-        // Dynamic Zoom Level & Coordinate HUD Tracker
-        function updateCoordsHUD(latlng) {
-            const coordsText = document.getElementById('coordsText');
-            if (!coordsText) return;
-            const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
-            if (latlng) {
-                coordsText.textContent = `Zoom ${zoom} | ${latlng.lat.toFixed(4)}° N, ${latlng.lng.toFixed(4)}° E`;
-            } else if (map) {
-                const center = map.getCenter();
-                coordsText.textContent = `Zoom ${zoom} | ${center.lat.toFixed(4)}° N, ${center.lng.toFixed(4)}° E`;
-            }
-        }
-
-        map.on('mousemove', (e) => updateCoordsHUD(e.latlng));
-        map.on('zoomend', () => updateCoordsHUD());
-        updateCoordsHUD();
-
-        // Invalidate size to ensure container dimensions and drag panning are instantly responsive
-        setTimeout(() => {
-            if (map) map.invalidateSize();
-        }, 120);
-
-        window.addEventListener('resize', () => {
-            if (map) map.invalidateSize();
-        });
+        mainMarkersLayer = L.layerGroup().addTo(mainMap);
+        mainFacilitiesLayer = L.layerGroup().addTo(mainMap);
 
         renderIndustrialFacilities();
+
+        setTimeout(() => {
+            if (mainMap) mainMap.invalidateSize();
+        }, 150);
     }
 
     function renderIndustrialFacilities() {
-        if (!facilityLayerGroup || !bufferRingsGroup) return;
-        facilityLayerGroup.clearLayers();
-        bufferRingsGroup.clearLayers();
+        if (!mainFacilitiesLayer) return;
+        mainFacilitiesLayer.clearLayers();
 
-        if (!appState.layers.industrialNodes) return;
-
-        KNOWN_INDUSTRIAL_HUBS.forEach((hub, idx) => {
+        KNOWN_INDUSTRIAL_HUBS.forEach((hub) => {
             const iconHtml = `
-                <div class="pin-marker-container pin-facility" title="${hub.name}">
-                    <div class="pin-ground-pulse"></div>
-                    <svg class="pin-svg" width="28" height="36" viewBox="0 0 28 36" fill="none">
-                        <defs>
-                            <linearGradient id="facGrad-${idx}" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#22d3ee"/>
-                                <stop offset="100%" stop-color="#0891b2"/>
-                            </linearGradient>
-                            <filter id="facShadow-${idx}" x="-20%" y="-20%" width="140%" height="140%">
-                                <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.5"/>
-                            </filter>
-                        </defs>
-                        <!-- High precision shield pin anchored at bottom tip (14, 34) -->
-                        <path d="M14 2 L25 7 L25 19 C25 25 14 34 14 34 C14 34 3 25 3 19 L3 7 Z" fill="url(#facGrad-${idx})" stroke="#ffffff" stroke-width="1.6" filter="url(#facShadow-${idx})"/>
-                        <!-- Factory icon glyph in center -->
-                        <path d="M7 20V13l4 2V13l4 2V10l5-2v12H7Z" fill="#0b132b" stroke="#ffffff" stroke-width="0.7"/>
+                <div style="background:#0b132b; border:1.8px solid #ffffff; border-radius:6px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.35);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2.2">
+                        <path d="M2 20V8l6 4V8l6 4V4l8-2v18H2Z"/>
                     </svg>
-                    <div class="pin-ground-anchor"></div>
                 </div>
             `;
             const customIcon = L.divIcon({
                 html: iconHtml,
-                className: 'custom-map-marker',
-                iconSize: [28, 36],
-                iconAnchor: [14, 34],
-                popupAnchor: [0, -36],
-                tooltipAnchor: [0, -36]
+                className: 'facility-marker',
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
             });
 
             const marker = L.marker([hub.lat, hub.lon], { icon: customIcon });
-            marker.bindTooltip(`
-                <div style="font-weight:700; color:#22d3ee; margin-bottom:2px;">${hub.name}</div>
-                <div style="font-size:10px; color:#cbd5e1;">${hub.type}</div>
-                <div style="font-size:9px; color:#94a3b8; margin-top:2px;">Coordinates: ${hub.lat.toFixed(4)}° N, ${hub.lon.toFixed(4)}° E</div>
-            `, {
-                className: 'facility-tooltip',
+            marker.bindTooltip(`<strong>${hub.name}</strong><br><span style="font-size:10px; color:#64748b;">${hub.type}</span>`, {
                 direction: 'top',
-                offset: [0, -36]
+                offset: [0, -12]
             });
-            facilityLayerGroup.addLayer(marker);
-
-            // Buffer Ring (5 km radius)
-            if (appState.layers.bufferRings) {
-                const circle = L.circle([hub.lat, hub.lon], {
-                    radius: 5000,
-                    color: '#06b6d4',
-                    weight: 1.5,
-                    dashArray: '4, 4',
-                    fillColor: '#06b6d4',
-                    fillOpacity: 0.07
-                });
-                bufferRingsGroup.addLayer(circle);
-            }
+            mainFacilitiesLayer.addLayer(marker);
         });
-        initLucideIcons();
     }
 
     // ----------------------------------------------------------------------
-    // 4. DATA FETCHING & LIVE SYNC ENGINE
+    // 4. DATA LOADING & FILTERING
     // ----------------------------------------------------------------------
-    async function loadDashboardData(showNotification = false) {
+    async function loadDashboardData() {
         try {
-            const [eventsResp, statsResp] = await Promise.all([
-                fetch(`${API_BASE_URL}/events`).catch(() => null),
-                fetch(`${API_BASE_URL}/events/stats`).catch(() => null)
-            ]);
-
-            if (eventsResp && eventsResp.ok) {
-                const backendEvents = await eventsResp.json();
-                
-                // Merge simulated events if any exist
-                const simEvents = appState.events.filter(e => e.event_id.startsWith('SIM-'));
-                appState.events = [...simEvents, ...backendEvents];
-                
-                appState.stats = (statsResp && statsResp.ok) ? await statsResp.json() : computeStatsFromEvents(appState.events);
-                updateStatusChip('live', '● LIVE SYNC ACTIVE');
-
-                if (showNotification) {
-                    showToast('⚡ Live API Poll: Telemetry updated from FastAPI backend', 'info');
-                }
+            const resp = await fetch(`${API_BASE_URL}/events`).catch(() => null);
+            if (resp && resp.ok) {
+                const backendEvents = await resp.json();
+                appState.events = backendEvents.length > 0 ? backendEvents : MOCK_EVENTS;
             } else {
-                if (appState.events.length === 0) {
-                    appState.events = MOCK_EVENTS;
-                }
-                appState.stats = computeStatsFromEvents(appState.events);
-                updateStatusChip('demo', '● STANDALONE DEMO');
-            }
-        } catch (err) {
-            if (appState.events.length === 0) {
                 appState.events = MOCK_EVENTS;
             }
-            appState.stats = computeStatsFromEvents(appState.events);
-            updateStatusChip('demo', '● STANDALONE DEMO');
+        } catch (e) {
+            appState.events = MOCK_EVENTS;
         }
 
-        applyFilters();
-    }
-
-    function startAutoSyncPolling() {
-        if (appState.autoSyncInterval) clearInterval(appState.autoSyncInterval);
-        
-        // Auto-poll every 6 seconds to demonstrate LIVE sync
-        appState.autoSyncInterval = setInterval(() => {
-            if (appState.isLivePolling) {
-                loadDashboardData(false);
+        appState.events.forEach(e => {
+            if (!e.risk_level) {
+                if (e.classification === 'INDUSTRIAL' && e.frp >= 40) e.risk_level = 'High Risk';
+                else if (e.classification === 'INDUSTRIAL' || e.frp >= 30) e.risk_level = 'Medium Risk';
+                else e.risk_level = 'Low Risk';
             }
-        }, 6000);
-    }
-
-    function computeStatsFromEvents(events) {
-        if (!events || events.length === 0) return { total_events: 0, industrial_count: 0, natural_count: 0, avg_frp: 0, max_frp: 0, high_confidence_ratio: 0 };
-        const total = events.length;
-        const industrial = events.filter(e => e.classification === 'INDUSTRIAL').length;
-        const natural = events.filter(e => e.classification === 'NATURAL').length;
-        const frps = events.map(e => e.frp);
-        const max_frp = Math.round(Math.max(...frps) * 10) / 10;
-        const highConf = events.filter(e => e.prediction_probability >= 0.90).length;
-
-        return {
-            total_events: total,
-            industrial_count: industrial,
-            natural_count: natural,
-            avg_frp: Math.round((frps.reduce((a, b) => a + b, 0) / total) * 10) / 10,
-            max_frp: max_frp,
-            high_confidence_ratio: Math.round((highConf / total) * 100) / 100
-        };
-    }
-
-    function updateStatusChip(type, text) {
-        const chipText = document.getElementById('statusText');
-        const chipDot = document.querySelector('#systemStatusChip .chip-dot');
-        if (chipText) chipText.textContent = text;
-        if (chipDot) {
-            if (type === 'live') {
-                chipDot.style.backgroundColor = '#00e699';
-                chipDot.style.boxShadow = '0 0 8px #00e699';
-            } else {
-                chipDot.style.backgroundColor = '#ff9900';
-                chipDot.style.boxShadow = 'none';
-            }
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    // 5. FILTERING ENGINE
-    // ----------------------------------------------------------------------
-    function applyFilters() {
-        const { search, classification, minFrp, minConfidence, industrialOnly, recurrence } = appState.filters;
-
-        appState.filteredEvents = appState.events.filter(event => {
-            if (search) {
-                const query = search.toLowerCase();
-                const matchId = event.event_id.toLowerCase().includes(query);
-                const matchFacility = (event.nearest_industrial_facility || '').toLowerCase().includes(query);
-                const matchLand = (event.land_cover || '').toLowerCase().includes(query);
-                if (!matchId && !matchFacility && !matchLand) return false;
-            }
-            if (classification !== 'ALL' && event.classification !== classification) return false;
-            if (event.frp < minFrp) return false;
-            if (event.prediction_probability < minConfidence) return false;
-            if (industrialOnly && event.industrial_distance_km >= 1.0) return false;
-            if (recurrence === 'high' && event.hotspot_count_30d < 10) return false;
-            if (recurrence === 'transient' && event.hotspot_count_30d >= 5) return false;
-            return true;
+            if (!e.facility_full) e.facility_full = e.nearest_industrial_facility || 'Industrial Facility';
+            if (!e.region) e.region = 'India National Territory';
         });
 
-        renderHeaderTelemetry();
-        renderMapMarkers();
-        renderTable();
-        renderAnalyticsCharts();
-        updateFilterCounters();
+        applyFilters();
 
-        if (!appState.selectedEventId && appState.filteredEvents.length > 0) {
+        if (appState.filteredEvents.length > 0 && !appState.selectedEventId) {
             selectEvent(appState.filteredEvents[0].event_id, false);
         }
     }
 
-    function updateFilterCounters() {
-        document.getElementById('filteredCount').textContent = appState.filteredEvents.length;
-        document.getElementById('totalCount').textContent = appState.events.length;
-        document.getElementById('gridEventCount').textContent = appState.filteredEvents.length;
+    function applyFilters() {
+        const { search, classification } = appState.filters;
+
+        appState.filteredEvents = appState.events.filter(e => {
+            if (search) {
+                const q = search.toLowerCase();
+                const mId = e.event_id.toLowerCase().includes(q);
+                const mFac = (e.nearest_industrial_facility || '').toLowerCase().includes(q);
+                const mLand = (e.land_cover || '').toLowerCase().includes(q);
+                if (!mId && !mFac && !mLand) return false;
+            }
+            if (classification !== 'ALL' && e.classification !== classification) {
+                return false;
+            }
+            return true;
+        });
+
+        // Apply sorting based on currentSort state
+        if (appState.currentSort === 'frp') {
+            appState.filteredEvents.sort((a, b) => b.frp - a.frp);
+        } else if (appState.currentSort === 'distance') {
+            appState.filteredEvents.sort((a, b) => a.industrial_distance_km - b.industrial_distance_km);
+        } else {
+            const riskOrder = { 'High Risk': 3, 'Medium Risk': 2, 'Low Risk': 1 };
+            appState.filteredEvents.sort((a, b) => (riskOrder[b.risk_level] || 0) - (riskOrder[a.risk_level] || 0));
+        }
+
+        renderMainMarkers();
+        renderEventsDrawer();
+        renderTable();
+        renderAnalyticsCharts();
+
+        const countHeader = document.getElementById('eventsCountHeader');
+        if (countHeader) countHeader.textContent = appState.filteredEvents.length.toLocaleString();
     }
 
-    function renderHeaderTelemetry() {
-        const stats = appState.stats || computeStatsFromEvents(appState.events);
-        document.getElementById('statTotalEvents').textContent = stats.total_events;
-        document.getElementById('statIndustrialCount').textContent = stats.industrial_count;
-        document.getElementById('statNaturalCount').textContent = stats.natural_count;
-        document.getElementById('statMaxFrp').textContent = stats.max_frp;
-    }
+    function renderMainMarkers() {
+        if (!mainMarkersLayer) return;
+        mainMarkersLayer.clearLayers();
 
-    // ----------------------------------------------------------------------
-    // 6. MAP MARKERS (HIGH PRECISION PINPOINT CARTO & TOOLTIPS)
-    // ----------------------------------------------------------------------
-    function renderMapMarkers() {
-        if (!markersLayerGroup) return;
-        markersLayerGroup.clearLayers();
-
-        appState.filteredEvents.forEach((event, idx) => {
-            const isInd = event.classification === 'INDUSTRIAL';
+        appState.filteredEvents.forEach(event => {
             const isSelected = event.event_id === appState.selectedEventId;
-            const markerTypeClass = isInd ? 'pin-industrial' : 'pin-natural';
-            const isPulsing = appState.layers.frpPulse ? 'pin-pulse' : '';
-            const selectedClass = isSelected ? 'pin-selected' : '';
-            const size = Math.min(Math.max(26 + Math.round(event.frp / 12), 26), 34);
-            const height = Math.round(size * 1.35); // e.g. 28w x 38h
+            let color = '#10b981';
+            if (event.risk_level === 'High Risk') color = '#ef4444';
+            else if (event.risk_level === 'Medium Risk') color = '#f97316';
 
-            const gradId = `heatGrad-${isInd ? 'ind' : 'nat'}-${idx}`;
-            const gradStops = isInd 
-                ? '<stop offset="0%" stop-color="#ff7a00"/><stop offset="100%" stop-color="#dc2626"/>'
-                : '<stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#047857"/>';
+            const size = isSelected ? 18 : 12;
+            const beaconHtml = isSelected ? `<div class="pin-focal-beacon" style="border-color:${color}; box-shadow:0 0 12px ${color};"></div>` : '';
 
-            const glyphSvg = isInd
-                ? '<path d="M14 9.5 C14 9.5 16 12 16 14 C16 15.5 15.2 16.5 14 16.5 C12.8 16.5 12 15.5 12 14 C12 12 14 9.5 14 9.5 Z" fill="#ffffff"/>'
-                : '<path d="M14 8 L18 14 H15 L18 18 H10 L13 14 H10 Z M13.5 18 V20 H14.5 V18 Z" fill="#ffffff"/>';
-
-            const focalBeaconHtml = isSelected ? '<div class="pin-focal-beacon"></div>' : '';
-
-            const html = `
-                <div class="pin-marker-container ${markerTypeClass} ${isPulsing} ${selectedClass}" style="width:${size}px;height:${height}px;" title="${event.event_id}">
-                    <div class="pin-ground-pulse"></div>
-                    ${focalBeaconHtml}
-                    <svg class="pin-svg" width="${size}" height="${height}" viewBox="0 0 28 38" fill="none">
-                        <defs>
-                            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-                                ${gradStops}
-                            </linearGradient>
-                            <filter id="pinShadow-${idx}" x="-20%" y="-20%" width="140%" height="140%">
-                                <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
-                            </filter>
-                        </defs>
-                        <!-- Teardrop pinpoint anchored at bottom center needle (14, 37) -->
-                        <path d="M14 2 C7.37 2 2 7.37 2 14 C2 23 14 37 14 37 C14 37 26 23 26 14 C26 7.37 20.63 2 14 2 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="1.8" filter="url(#pinShadow-${idx})"/>
-                        <circle cx="14" cy="14" r="8" fill="#0c1222" fill-opacity="0.8" stroke="#ffffff" stroke-width="0.8"/>
-                        ${glyphSvg}
-                        <!-- Center target dot indicator -->
-                        <circle cx="14" cy="14" r="1.5" fill="#ffffff"/>
-                    </svg>
-                    <div class="pin-ground-anchor"></div>
+            const iconHtml = `
+                <div class="pin-marker-container ${isSelected ? 'pin-selected' : ''}" style="width:${size}px; height:${size}px;">
+                    ${beaconHtml}
+                    <div style="width:${size}px; height:${size}px; border-radius:50%; background:${color}; border:2.5px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>
                 </div>
             `;
 
-            const customIcon = L.divIcon({
-                html: html,
-                className: 'custom-map-marker',
-                iconSize: [size, height],
-                iconAnchor: [size / 2, height - 1], // Exactly at the needle tip!
-                popupAnchor: [0, -height - 2],
-                tooltipAnchor: [0, -height - 2]
+            const icon = L.divIcon({
+                html: iconHtml,
+                className: 'custom-risk-dot',
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2]
             });
 
-            const marker = L.marker([event.latitude, event.longitude], { 
-                icon: customIcon,
+            const marker = L.marker([event.latitude, event.longitude], {
+                icon: icon,
                 zIndexOffset: isSelected ? 1200 : 0
             });
             marker._eventId = event.event_id;
 
-            // Rich Hover Tooltip (UX Life Improvement)
-            const tooltipHtml = `
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
-                    <span class="badge-sm ${isInd ? 'badge-ind' : 'badge-nat'}">${event.classification}</span>
-                    <strong style="color:#ffffff; font-family:monospace; font-size:10px;">${event.event_id}</strong>
-                </div>
-                <div style="font-size:12px; font-weight:700; color:#ffedd5; margin-bottom:2px;">
-                    ${event.frp} MW FRP &bull; <span style="font-weight:400; color:#94a3b8;">${event.brightness_temperature || 350} K</span>
-                </div>
-                <div style="font-size:10px; color:#cbd5e1;">
-                    ${event.nearest_industrial_facility ? `${event.nearest_industrial_facility} (${event.industrial_distance_km} km)` : event.land_cover}
-                </div>
-                <div style="font-size:9px; color:#64748b; margin-top:2px;">Click to inspect attribution</div>
-            `;
-            marker.bindTooltip(tooltipHtml, {
-                className: `event-marker-tooltip ${isInd ? '' : 'natural-tooltip'}`,
-                direction: 'top',
-                offset: [0, -height]
+            marker.bindTooltip(`
+                <div style="font-weight:700; color:${color}; font-size:11px;">${event.risk_level} &bull; ${event.event_id}</div>
+                <div style="font-size:11px; color:#334155; margin-top:2px;">${event.nearest_industrial_facility || event.land_cover}</div>
+                <div style="font-size:10px; color:#64748b;">${event.frp} MW FRP &bull; ${event.acq_date}</div>
+            `, { direction: 'top', offset: [0, -10] });
+
+            marker.on('click', () => {
+                selectEvent(event.event_id, true);
+                showEventDetail(event.event_id);
             });
 
-            // Interactive Leaflet Popup
-            const popupContent = `
-                <div style="padding:8px 10px; min-width:185px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span class="badge-sm ${isInd ? 'badge-ind' : 'badge-nat'}">${event.classification}</span>
-                        <span style="font-size:10px; font-family:monospace; color:#94a3b8;">${event.event_id}</span>
+            mainMarkersLayer.addLayer(marker);
+        });
+    }
+
+    function renderEventsDrawer() {
+        const container = document.getElementById('eventsListContainer');
+        if (!container) return;
+
+        if (appState.filteredEvents.length === 0) {
+            container.innerHTML = `<div class="text-center p-6 text-slate-400 text-xs">No thermal anomalies match current filter criteria.</div>`;
+            return;
+        }
+
+        container.innerHTML = appState.filteredEvents.map(event => {
+            const isSelected = event.event_id === appState.selectedEventId ? 'selected' : '';
+            let riskClass = 'low';
+            if (event.risk_level === 'High Risk') riskClass = 'high';
+            else if (event.risk_level === 'Medium Risk') riskClass = 'medium';
+
+            const flareColor = riskClass === 'high' ? '#ff3b30' : (riskClass === 'medium' ? '#ff9500' : '#34c759');
+
+            return `
+                <div class="event-card-item ${isSelected}" data-id="${event.event_id}">
+                    <div class="event-thumb-crop">
+                        <svg width="48" height="48" viewBox="0 0 48 48">
+                            <rect width="48" height="48" fill="#182234"/>
+                            <path d="M4 14h40M4 28h40M16 4v40M32 4v40" stroke="#25354e" stroke-width="1.2"/>
+                            <circle cx="24" cy="24" r="9" fill="${flareColor}" opacity="0.35"/>
+                            <circle cx="24" cy="24" r="5" fill="${flareColor}" opacity="0.85"/>
+                            <circle cx="24" cy="24" r="2" fill="#ffffff"/>
+                        </svg>
                     </div>
-                    <div style="font-size:15px; font-weight:700; color:#ffffff; margin-bottom:2px;">
-                        ${event.frp} MW Thermal FRP
+
+                    <div class="event-card-info">
+                        <div class="event-card-title-row">
+                            <span class="event-card-id">${event.event_id}</span>
+                            <span class="risk-badge ${riskClass}">${event.risk_level}</span>
+                        </div>
+                        <div class="event-card-sub" title="${event.nearest_industrial_facility || event.land_cover}">
+                            ${event.nearest_industrial_facility || event.land_cover} (${event.industrial_distance_km} km)
+                        </div>
+                        <div class="event-card-time">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            <span>${event.acq_date}, ${event.acq_time} UTC</span>
+                        </div>
                     </div>
-                    <div style="font-size:10px; font-family:monospace; color:#94a3b8; margin-bottom:6px;">
-                        ${event.latitude.toFixed(4)}° N, ${event.longitude.toFixed(4)}° E
-                    </div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;">
-                        ${event.nearest_industrial_facility || event.land_cover}<br>
-                        <small style="color:#f97316; font-weight:600;">Distance to plant: ${event.industrial_distance_km} km</small>
-                    </div>
-                    <button class="btn btn-secondary btn-sm btn-full popup-inspect-btn" data-id="${event.event_id}">
-                        Inspect Telemetry
-                    </button>
+
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
                 </div>
             `;
+        }).join('');
 
-            marker.bindPopup(popupContent);
-            marker.on('click', () => selectEvent(event.event_id, false));
+        initLucideIcons();
 
-            markersLayerGroup.addLayer(marker);
-        });
-
-        map.off('popupopen');
-        map.on('popupopen', () => {
-            document.querySelectorAll('.popup-inspect-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.getAttribute('data-id');
-                    selectEvent(id, true);
-                    map.closePopup();
-                });
+        container.querySelectorAll('.event-card-item').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.getAttribute('data-id');
+                selectEvent(id, true);
+                showEventDetail(id);
             });
         });
     }
 
-    // Dynamically highlights and elevates the active focal anomaly marker
-    function highlightFocalMarker(selectedId) {
-        if (!markersLayerGroup) return;
-        markersLayerGroup.eachLayer(marker => {
-            if (!marker._eventId) return;
-            const isFocal = marker._eventId === selectedId;
-            marker.setZIndexOffset(isFocal ? 1200 : 0);
-            const el = marker.getElement();
-            if (el) {
-                const container = el.querySelector('.pin-marker-container');
-                if (container) {
-                    if (isFocal) {
-                        container.classList.add('pin-selected');
-                        if (!container.querySelector('.pin-focal-beacon')) {
-                            const beacon = document.createElement('div');
-                            beacon.className = 'pin-focal-beacon';
-                            container.appendChild(beacon);
-                        }
-                    } else {
-                        container.classList.remove('pin-selected');
-                        const beacon = container.querySelector('.pin-focal-beacon');
-                        if (beacon) beacon.remove();
+    // ----------------------------------------------------------------------
+    // 5. EVENT SELECTION & MULTI-TAB DISPATCHER
+    // ----------------------------------------------------------------------
+    function selectEvent(eventId, flyMainMap = false) {
+        appState.selectedEventId = eventId;
+        const event = appState.events.find(e => e.event_id === eventId);
+        if (!event) return;
+
+        document.querySelectorAll('.event-card-item').forEach(c => {
+            if (c.getAttribute('data-id') === eventId) c.classList.add('selected');
+            else c.classList.remove('selected');
+        });
+
+        renderMainMarkers();
+
+        if (flyMainMap && mainMap) {
+            mainMap.flyTo([event.latitude, event.longitude], 12, { duration: 1.2 });
+        }
+
+        populateOverviewTab(event);
+        populateTemporalTab(event);
+        populateNearbyTab(event);
+    }
+
+    // ----------------------------------------------------------------------
+    // 6. TAB 1: OVERVIEW POPULATION
+    // ----------------------------------------------------------------------
+    function populateOverviewTab(event) {
+        const detEventId = document.getElementById('detEventId');
+        const detRiskBadge = document.getElementById('detRiskBadge');
+        const detPersistentTag = document.getElementById('detPersistentTag');
+        const detFacilitySub = document.getElementById('detFacilitySubtitle');
+        const detTimeSub = document.getElementById('detTimestampSubtitle');
+
+        if (detEventId) detEventId.textContent = event.event_id;
+        if (detRiskBadge) {
+            detRiskBadge.textContent = event.risk_level;
+            detRiskBadge.className = `risk-badge ${event.risk_level === 'High Risk' ? 'high' : (event.risk_level === 'Medium Risk' ? 'medium' : 'low')}`;
+        }
+        if (detPersistentTag) {
+            detPersistentTag.textContent = event.classification === 'INDUSTRIAL' ? 'Industrial / Persistent' : 'Natural / Transient';
+        }
+        if (detFacilitySub) detFacilitySub.textContent = `${event.nearest_industrial_facility || event.land_cover} (${event.industrial_distance_km} km)`;
+        if (detTimeSub) detTimeSub.textContent = `${event.acq_date}, ${event.acq_time} UTC`;
+
+        document.getElementById('detFrpMetric').textContent = event.frp.toFixed(1);
+        document.getElementById('detDetectionsMetric').textContent = event.hotspot_count_30d;
+        document.getElementById('detConfidenceMetric').textContent = `${Math.round(event.prediction_probability * 100)}%`;
+        document.getElementById('detDistanceMetric').textContent = `${event.industrial_distance_km} km`;
+
+        const reasonsContainer = document.getElementById('detFlagReasonsList');
+        if (reasonsContainer) {
+            const reasons = event.reasons && event.reasons.length > 0 ? event.reasons : [
+                `Proximity: ${event.industrial_distance_km} km to nearest facility`,
+                `Temporal recurrence: ${event.hotspot_count_30d} detections in 30 days`,
+                `FRP Radiative Intensity: ${event.frp} MW`,
+                `Zoned land cover: ${event.land_cover}`
+            ];
+
+            const iconMap = ['factory', 'repeat', 'flame', 'building'];
+            reasonsContainer.innerHTML = reasons.map((r, i) => `
+                <div class="flag-reason-row">
+                    <div class="flag-icon-dot bg-orange-50 text-orange-600 border border-orange-100">
+                        <i data-lucide="${iconMap[i % iconMap.length]}" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <span>${r}</span>
+                </div>
+            `).join('');
+            initLucideIcons();
+        }
+
+        const callout = document.getElementById('detCalloutText');
+        if (callout) {
+            callout.textContent = event.classification === 'INDUSTRIAL'
+                ? "This source shows persistent thermal activity in close proximity to an industrial facility. Analyst verification recommended."
+                : "This source indicates a non-persistent natural wildfire or crop burn event located outside industrial buffer zones.";
+        }
+
+        document.getElementById('detCoordsText').textContent = `${event.latitude.toFixed(4)}° N, ${event.longitude.toFixed(4)}° E`;
+        document.getElementById('detFacilityNameText').textContent = event.nearest_industrial_facility || 'None in 5km';
+        document.getElementById('detFacilityDistText').textContent = `${event.industrial_distance_km} km`;
+        document.getElementById('detRegionText').textContent = event.region || 'Western India';
+
+        updateDetailMap(event);
+    }
+
+    function updateDetailMap(event) {
+        const detailContainer = document.getElementById('detailMap');
+        if (!detailContainer) return;
+
+        if (!detailMap) {
+            detailMap = L.map('detailMap', {
+                center: [event.latitude, event.longitude],
+                zoom: 15,
+                zoomControl: false,
+                dragging: true,
+                scrollWheelZoom: true,
+                attributionControl: false
+            });
+
+            detailTileLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: ['a', 'b', 'c'], maxZoom: 19 });
+            detailTileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 });
+
+            // Street View as default
+            detailTileLayers.street.addTo(detailMap);
+            L.control.zoom({ position: 'bottomright' }).addTo(detailMap);
+            L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(detailMap);
+        } else {
+            detailMap.setView([event.latitude, event.longitude], 15);
+        }
+
+        // Stick pulsing marker to exact coordinates on the detail map
+        if (!detailMarkerLayer) {
+            detailMarkerLayer = L.layerGroup().addTo(detailMap);
+        }
+        detailMarkerLayer.clearLayers();
+
+        let color = '#10b981';
+        if (event.risk_level === 'High Risk') color = '#ef4444';
+        else if (event.risk_level === 'Medium Risk') color = '#f97316';
+
+        const iconHtml = `
+            <div class="pin-marker-container pin-selected" style="width:20px; height:20px;">
+                <div class="pin-focal-beacon" style="border-color:${color}; box-shadow:0 0 14px ${color};"></div>
+                <div style="width:20px; height:20px; border-radius:50%; background:${color}; border:2.5px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>
+            </div>
+        `;
+        const customIcon = L.divIcon({
+            html: iconHtml,
+            className: 'custom-risk-dot',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        const marker = L.marker([event.latitude, event.longitude], { icon: customIcon });
+        marker.bindTooltip(`
+            <div style="font-weight:700; color:${color}; font-size:11px;">${event.risk_level} &bull; ${event.event_id}</div>
+            <div style="font-size:11px; color:#334155; margin-top:2px;">${event.nearest_industrial_facility || event.land_cover}</div>
+            <div style="font-size:10px; color:#64748b;">${event.frp} MW FRP &bull; ${event.acq_date}</div>
+        `, { direction: 'top', offset: [0, -10] });
+
+        detailMarkerLayer.addLayer(marker);
+
+        setTimeout(() => {
+            if (detailMap) detailMap.invalidateSize();
+        }, 120);
+    }
+
+    // ----------------------------------------------------------------------
+    // 7. TAB 2: TEMPORAL BEHAVIOUR POPULATION & CHARTS
+    // ----------------------------------------------------------------------
+    function populateTemporalTab(event) {
+        // Header
+        const tId = document.getElementById('temporalEventId');
+        const tBadge = document.getElementById('temporalRiskBadge');
+        const tFac = document.getElementById('temporalFacilitySub');
+        const tTime = document.getElementById('temporalTimeSub');
+
+        if (tId) tId.textContent = event.event_id;
+        if (tBadge) {
+            tBadge.textContent = event.risk_level;
+            tBadge.className = `risk-badge ${event.risk_level === 'High Risk' ? 'high' : (event.risk_level === 'Medium Risk' ? 'medium' : 'low')}`;
+        }
+        if (tFac) tFac.textContent = `${event.nearest_industrial_facility || event.land_cover} (${event.industrial_distance_km} km)`;
+        if (tTime) tTime.textContent = `${event.acq_date}, ${event.acq_time} UTC`;
+
+        // KPIs
+        document.getElementById('kpiTemporalTotal').textContent = event.hotspot_count_30d;
+        document.getElementById('kpiTemporalMean').innerHTML = `${event.frp.toFixed(1)} <span class="text-xs font-normal text-slate-500">MW</span>`;
+        document.getElementById('kpiTemporalMax').innerHTML = `${(event.frp * 1.58).toFixed(1)} <span class="text-xs font-normal text-slate-500">MW</span>`;
+        document.getElementById('kpiTemporalPersist').innerHTML = `${event.hotspot_count_30d} <span class="text-xs font-normal text-slate-500">days</span>`;
+
+        // Render Combo Timeline Chart
+        renderTemporalTimelineChart(event);
+
+        // Render Diurnal Matrix
+        renderDiurnalMatrix(event);
+
+        // Render Day/Night Donut
+        renderDayNightDonut(event);
+    }
+
+    function renderTemporalTimelineChart(event) {
+        const canvas = document.getElementById('chartTemporalTimeline');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        // Dynamic 30-day simulated curve matching the reference design
+        const labels = ['12 Apr', '14 Apr', '16 Apr', '18 Apr', '20 Apr', '22 Apr', '24 Apr', '26 Apr', '28 Apr', '30 Apr', '02 May', '04 May', '06 May', '08 May', '10 May', '12 May'];
+        const frpData = [12, 16, 28, 22, 34, 42, 41, 58, 62, 54, 82, 78, 98, 72, 81, event.frp];
+        const detectionsData = [1, 2, 3, 2, 4, 3, 5, 4, 6, 5, 7, 6, 8, 5, 7, 6];
+        const nightDetections = [null, 18, null, 24, null, 40, null, 56, null, 50, null, 75, null, 70, null, 62];
+
+        if (charts.temporalTimeline) charts.temporalTimeline.destroy();
+
+        charts.temporalTimeline = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'FRP (MW)',
+                        data: frpData,
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2.2,
+                        tension: 0.35,
+                        pointBackgroundColor: '#ef4444',
+                        pointRadius: 3,
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Detections',
+                        data: detectionsData,
+                        backgroundColor: 'rgba(249, 115, 22, 0.75)',
+                        borderRadius: 3,
+                        barThickness: 6,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        type: 'scatter',
+                        label: 'Night Detections',
+                        data: nightDetections.map((v, i) => v !== null ? { x: labels[i], y: v } : null).filter(p => p !== null),
+                        backgroundColor: '#6366f1',
+                        borderColor: '#ffffff',
+                        borderWidth: 1.5,
+                        pointRadius: 4.5,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10 }, color: '#64748b' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'FRP (MW)', color: '#64748b', font: { size: 10 } },
+                        ticks: { font: { size: 10 }, color: '#64748b' },
+                        grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                        min: 0,
+                        max: 120
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'Number of Detections', color: '#64748b', font: { size: 10 } },
+                        ticks: { font: { size: 10 }, color: '#64748b', stepSize: 2 },
+                        grid: { drawOnChartArea: false },
+                        min: 0,
+                        max: 10
                     }
                 }
             }
         });
     }
 
-    // Proximity Vector Connector (Industrial Heat Trace <-> Industrial Facility Hub)
-    function drawProximityVector(event) {
-        if (proximityVectorLayer && map) {
-            map.removeLayer(proximityVectorLayer);
-            proximityVectorLayer = null;
-        }
-        if (!event || event.classification !== 'INDUSTRIAL' || !event.nearest_industrial_facility) return;
+    function renderDiurnalMatrix() {
+        const container = document.getElementById('diurnalMatrixContainer');
+        if (!container) return;
 
-        const hub = KNOWN_INDUSTRIAL_HUBS.find(h => h.name.toLowerCase() === event.nearest_industrial_facility.toLowerCase())
-                 || KNOWN_INDUSTRIAL_HUBS.find(h => event.nearest_industrial_facility.toLowerCase().includes(h.name.toLowerCase().split(' ')[0]))
-                 || KNOWN_INDUSTRIAL_HUBS[0];
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const hours = ['00', '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22'];
 
-        if (!hub || !map) return;
-
-        const p1 = [event.latitude, event.longitude];
-        const p2 = [hub.lat, hub.lon];
-        const mid = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
-
-        const line = L.polyline([p1, p2], {
-            className: 'proximity-vector-line',
-            color: '#ea580c',
-            weight: 2.5,
-            dashArray: '6, 6',
-            opacity: 0.95
-        });
-
-        const distLabel = event.industrial_distance_km < 1
-            ? `${Math.round(event.industrial_distance_km * 1000)} m`
-            : `${event.industrial_distance_km.toFixed(2)} km`;
-
-        const badge = L.marker(mid, {
-            icon: L.divIcon({
-                className: 'custom-map-marker',
-                html: `<div class="proximity-badge-marker">⚡ ${distLabel} to ${hub.name.split(' ')[0]}</div>`,
-                iconSize: [120, 24],
-                iconAnchor: [60, 12]
-            }),
-            interactive: false
-        });
-
-        proximityVectorLayer = L.layerGroup([line, badge]).addTo(map);
-    }
-
-    // ----------------------------------------------------------------------
-    // 7. DATA TABLE RENDERER
-    // ----------------------------------------------------------------------
-    function renderTable() {
-        const tbody = document.getElementById('tableBody');
-        if (!tbody) return;
-
-        if (appState.filteredEvents.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:24px; color:#64748b;">No thermal events match current filter.</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = appState.filteredEvents.map(e => {
-            const isSelected = e.event_id === appState.selectedEventId ? 'selected-row' : '';
-            const isInd = e.classification === 'INDUSTRIAL';
-            const certPct = Math.round(e.prediction_probability * 100);
-
-            return `
-                <tr class="${isSelected}" data-id="${e.event_id}">
-                    <td style="font-family:var(--font-mono); font-weight:600; color:#ffffff;">${e.event_id}</td>
-                    <td><span class="badge-sm ${isInd ? 'badge-ind' : 'badge-nat'}">${e.classification}</span></td>
-                    <td style="font-family:var(--font-mono); font-weight:600; color:${certPct > 90 ? '#00e699' : '#ff6b00'};">${certPct}%</td>
-                    <td style="font-family:var(--font-mono); font-size:11px;">${e.latitude.toFixed(4)}°, ${e.longitude.toFixed(4)}°</td>
-                    <td style="font-family:var(--font-heading); font-weight:700; color:#ffffff;">${e.frp} MW</td>
-                    <td style="max-width:170px; overflow:hidden; text-overflow:ellipsis;">${e.nearest_industrial_facility || 'None in 5km'}</td>
-                    <td style="font-family:var(--font-mono);">${e.industrial_distance_km} km</td>
-                    <td><span style="font-weight:600; color:${e.hotspot_count_30d > 10 ? '#ff6b00' : '#94a3b8'};">${e.hotspot_count_30d}</span></td>
-                    <td>${e.land_cover || 'Built-up'}</td>
-                    <td style="font-size:10px; color:#64748b;">${e.acq_date} ${e.acq_time}</td>
-                    <td><button class="btn btn-outline btn-sm row-inspect-btn" data-id="${e.event_id}">Inspect</button></td>
-                </tr>
-            `;
-        }).join('');
-
-        tbody.querySelectorAll('tr').forEach(row => {
-            row.addEventListener('click', () => {
-                const id = row.getAttribute('data-id');
-                if (id) selectEvent(id, true);
+        let html = '<table class="diurnal-matrix-table"><tbody>';
+        days.forEach(d => {
+            html += `<tr><td style="width:26px; text-align:left; font-weight:600;">${d}</td>`;
+            hours.forEach((h, hi) => {
+                let lvl = 0;
+                // High activity cluster during midday/flare cycles matching reference
+                if (hi >= 5 && hi <= 8) lvl = Math.floor(Math.random() * 3) + 3;
+                else if (hi >= 4 && hi <= 9) lvl = Math.floor(Math.random() * 2) + 1;
+                else lvl = Math.random() > 0.7 ? 1 : 0;
+                html += `<td><div class="diurnal-block lvl-${lvl}" title="${d} ${h}:00 - Activity Lvl ${lvl}"></div></td>`;
             });
+            html += '</tr>';
+        });
+        html += '<tr><td></td>';
+        hours.forEach(h => html += `<td style="font-size:8px; color:#94a3b8;">${h}</td>`);
+        html += '</tr></tbody></table>';
+
+        container.innerHTML = html;
+    }
+
+    function renderDayNightDonut(event) {
+        const canvas = document.getElementById('chartDayNightDonut');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        const dayCount = Math.round(event.hotspot_count_30d * 0.67);
+        const nightCount = Math.max(event.hotspot_count_30d - dayCount, 1);
+
+        document.getElementById('donutTotalText').textContent = event.hotspot_count_30d;
+        document.getElementById('donutDayCount').textContent = `${dayCount} (67%)`;
+        document.getElementById('donutNightCount').textContent = `${nightCount} (33%)`;
+
+        if (charts.dayNightDonut) charts.dayNightDonut.destroy();
+
+        charts.dayNightDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Day-time', 'Night-time'],
+                datasets: [{
+                    data: [dayCount, nightCount],
+                    backgroundColor: ['#f59e0b', '#4f46e5'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
         });
     }
 
     // ----------------------------------------------------------------------
-    // 8. INSPECTOR PANEL
+    // 8. TAB 3: NEARBY FACILITIES POPULATION & BUFFER MAP
     // ----------------------------------------------------------------------
-    function selectEvent(eventId, focusMap = false) {
-        appState.selectedEventId = eventId;
-        const event = appState.events.find(e => e.event_id === eventId);
+    function populateNearbyTab(event) {
+        const nId = document.getElementById('nearbyEventId');
+        const nBadge = document.getElementById('nearbyRiskBadge');
+        const nFac = document.getElementById('nearbyFacilitySub');
+        const nTime = document.getElementById('nearbyTimeSub');
 
-        document.querySelectorAll('#tableBody tr').forEach(row => {
-            if (row.getAttribute('data-id') === eventId) row.classList.add('selected-row');
-            else row.classList.remove('selected-row');
-        });
+        if (nId) nId.textContent = event.event_id;
+        if (nBadge) {
+            nBadge.textContent = event.risk_level;
+            nBadge.className = `risk-badge ${event.risk_level === 'High Risk' ? 'high' : (event.risk_level === 'Medium Risk' ? 'medium' : 'low')}`;
+        }
+        if (nFac) nFac.textContent = `${event.nearest_industrial_facility || event.land_cover} (${event.industrial_distance_km} km)`;
+        if (nTime) nTime.textContent = `${event.acq_date}, ${event.acq_time} UTC`;
 
-        if (!event) return;
+        document.getElementById('nearbyCardNearestDist').textContent = `${event.industrial_distance_km} km`;
+        document.getElementById('nearbyCardNearestName').textContent = event.nearest_industrial_facility || 'Gujarat Refinery';
 
-        // Draw proximity connector vector to nearest industrial facility
-        drawProximityVector(event);
+        // Render Satellite Buffer Map
+        updateNearbyBufferMap(event);
 
-        const emptyState = document.getElementById('inspectorEmptyState');
-        const inspectorContent = document.getElementById('inspectorContent');
+        // Render Ranked Asset Lists
+        renderRankedAssetLists(event);
+    }
 
-        if (emptyState) emptyState.classList.add('hidden');
-        if (inspectorContent) inspectorContent.classList.remove('hidden');
+    function updateNearbyBufferMap(event) {
+        const container = document.getElementById('nearbyBufferMap');
+        if (!container) return;
 
-        const banner = document.getElementById('verdictBanner');
-        const classTag = document.getElementById('verdictClassTag');
-        const verdictId = document.getElementById('verdictEventId');
-        const fillBar = document.getElementById('verdictProgressFill');
-        const probText = document.getElementById('verdictProbText');
+        if (!nearbyBufferMap) {
+            nearbyBufferMap = L.map('nearbyBufferMap', {
+                center: [event.latitude, event.longitude],
+                zoom: 12,
+                zoomControl: false,
+                attributionControl: false
+            });
 
-        const isInd = event.classification === 'INDUSTRIAL';
-        const probPct = Math.round(event.prediction_probability * 100);
+            nearbyTileLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                subdomains: ['a', 'b', 'c'],
+                maxZoom: 19
+            }).addTo(nearbyBufferMap);
 
-        if (banner) banner.className = isInd ? 'verdict-card' : 'verdict-card natural-card';
-        if (classTag) classTag.textContent = event.classification;
-        if (verdictId) verdictId.textContent = event.event_id;
-        if (probText) probText.textContent = `${probPct}% Certainty Score`;
-        if (fillBar) fillBar.style.width = `${probPct}%`;
-
-
-        // Specs
-        document.getElementById('detFacility').textContent = event.nearest_industrial_facility || 'None within 5 km';
-        document.getElementById('detDistance').textContent = `${event.industrial_distance_km} km`;
-        document.getElementById('detLandCover').textContent = event.land_cover || 'Built-up / Industrial';
-        document.getElementById('det30dCount').textContent = `${event.hotspot_count_30d} hits`;
-
-        document.getElementById('detCoordinates').textContent = `${event.latitude.toFixed(4)}°, ${event.longitude.toFixed(4)}°`;
-        document.getElementById('detFrp').textContent = `${event.frp} MW`;
-        document.getElementById('detBt').textContent = `${event.brightness_temperature || 350.0} K`;
-        document.getElementById('detAcqTime').textContent = `${event.acq_date} @ ${event.acq_time} UTC`;
-        document.getElementById('detSatOrbit').textContent = `${event.satellite || 'VIIRS_SNPP'} (${event.daynight === 'N' ? 'Night Orbit' : 'Day Orbit'})`;
-        document.getElementById('detConfidence').textContent = (event.confidence || 'HIGH').toUpperCase();
-
-        if (focusMap && map) {
-            map.flyTo([event.latitude, event.longitude], 14, { duration: 1.2 });
+            L.control.zoom({ position: 'topright' }).addTo(nearbyBufferMap);
+        } else {
+            nearbyBufferMap.setView([event.latitude, event.longitude], 12);
         }
 
-        // Elevate and highlight focal center anomaly on map
-        highlightFocalMarker(eventId);
+        // Clear existing buffer layers if any
+        if (nearbyBufferMap._bufferLayerGroup) {
+            nearbyBufferMap.removeLayer(nearbyBufferMap._bufferLayerGroup);
+        }
 
-        // Ensure newly rendered inspector SVGs are initialized
+        const bufferGroup = L.layerGroup().addTo(nearbyBufferMap);
+        nearbyBufferMap._bufferLayerGroup = bufferGroup;
+
+        // Concentric Range Rings (1 km, 2 km, 5 km)
+        [1000, 2000, 5000].forEach((r, idx) => {
+            const circle = L.circle([event.latitude, event.longitude], {
+                radius: r,
+                color: '#22d3ee',
+                weight: 1.6,
+                dashArray: '6, 6',
+                fillColor: '#22d3ee',
+                fillOpacity: 0.04
+            });
+            bufferGroup.addLayer(circle);
+
+            // Ring label
+            const labelPos = [event.latitude + (r / 111320), event.longitude];
+            const badge = L.marker(labelPos, {
+                icon: L.divIcon({
+                    html: `<span style="font-size:9px; color:#22d3ee; font-weight:700; background:rgba(11,19,43,0.7); padding:1px 4px; border-radius:3px;">${r / 1000} km</span>`,
+                    className: 'ring-dist-label',
+                    iconSize: [36, 14],
+                    iconAnchor: [18, 7]
+                }),
+                interactive: false
+            });
+            bufferGroup.addLayer(badge);
+        });
+
+        // Focal Source Pin in Center with Radar Ping
+        const focalIcon = L.divIcon({
+            html: `
+                <div style="position:relative; width:22px; height:22px;">
+                    <div style="position:absolute; inset:-8px; border:2px solid #ef4444; border-radius:50%; animation:focalBeaconPing 1.8s infinite;"></div>
+                    <div style="width:22px; height:22px; border-radius:50%; background:#ef4444; border:3px solid #ffffff; box-shadow:0 0 16px #ef4444;"></div>
+                </div>
+            `,
+            className: 'focal-buffer-pin',
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+        });
+        const focalMarker = L.marker([event.latitude, event.longitude], { icon: focalIcon, zIndexOffset: 1000 });
+        bufferGroup.addLayer(focalMarker);
+
+        // Nearby Facility Pins
+        NEARBY_FACILITIES_DATA.forEach(fac => {
+            const facLat = event.latitude + fac.latOffset;
+            const facLon = event.longitude + fac.lonOffset;
+            const icon = L.divIcon({
+                html: `
+                    <div style="width:20px; height:20px; background:#0284c7; border:2px solid #ffffff; border-radius:4px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><path d="M2 20V8l6 4V8l6 4V4l8-2v18H2Z"/></svg>
+                    </div>
+                `,
+                className: 'nearby-fac-pin',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            const m = L.marker([facLat, facLon], { icon: icon });
+            m.bindTooltip(`<strong>${fac.name}</strong><br><span style="font-size:10px; color:#38bdf8;">${fac.dist}</span>`, { direction: 'top', offset: [0, -10] });
+            bufferGroup.addLayer(m);
+        });
+
+        // Nearby Quarry Pins
+        NEARBY_QUARRIES_DATA.forEach(q => {
+            const qLat = event.latitude + q.latOffset;
+            const qLon = event.longitude + q.lonOffset;
+            const icon = L.divIcon({
+                html: `
+                    <div style="width:18px; height:18px; background:#d97706; border:2px solid #ffffff; border-radius:4px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
+                    </div>
+                `,
+                className: 'nearby-quarry-pin',
+                iconSize: [18, 18],
+                iconAnchor: [9, 9]
+            });
+            const m = L.marker([qLat, qLon], { icon: icon });
+            m.bindTooltip(`<strong>${q.name}</strong><br><span style="font-size:10px; color:#f59e0b;">${q.dist}</span>`, { direction: 'top', offset: [0, -9] });
+            bufferGroup.addLayer(m);
+        });
+
+        setTimeout(() => {
+            if (nearbyBufferMap) nearbyBufferMap.invalidateSize();
+        }, 120);
+    }
+
+    function renderRankedAssetLists() {
+        const facList = document.getElementById('nearbyFacilitiesList');
+        if (facList) {
+            facList.innerHTML = NEARBY_FACILITIES_DATA.map((fac, idx) => `
+                <div class="asset-item-row">
+                    <span class="asset-rank-num">${idx + 1}</span>
+                    <div class="asset-icon-box bg-blue-100 text-blue-600">
+                        <i data-lucide="${fac.icon}" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="asset-info">
+                        <div class="asset-name" title="${fac.name}">${fac.name}</div>
+                        <div class="asset-type">${fac.type}</div>
+                    </div>
+                    <span class="asset-distance-pill dist-industrial">${fac.dist}</span>
+                </div>
+            `).join('');
+        }
+
+        const qList = document.getElementById('nearbyQuarriesList');
+        if (qList) {
+            qList.innerHTML = NEARBY_QUARRIES_DATA.map((q, idx) => `
+                <div class="asset-item-row">
+                    <span class="asset-rank-num">${idx + 1}</span>
+                    <div class="asset-icon-box bg-amber-100 text-amber-600">
+                        <i data-lucide="${q.icon}" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="asset-info">
+                        <div class="asset-name" title="${q.name}">${q.name}</div>
+                        <div class="asset-type">${q.type}</div>
+                    </div>
+                    <span class="asset-distance-pill dist-quarry">${q.dist}</span>
+                </div>
+            `).join('');
+        }
+
         initLucideIcons();
     }
 
     // ----------------------------------------------------------------------
-    // 9. ANALYTICS CHARTS
+    // 9. SCREEN & DETAIL TAB SWITCHER
+    // ----------------------------------------------------------------------
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen-view').forEach(s => s.classList.remove('active'));
+        const target = document.getElementById(screenId);
+        if (target) target.classList.add('active');
+
+        // Toggle Sidebar menus between Explorer and Detail modes
+        const mainNav = document.getElementById('mainNavList');
+        const detailNav = document.getElementById('detailNavList');
+
+        if (screenId === 'screenDetail') {
+            if (mainNav) mainNav.classList.add('hidden');
+            if (detailNav) detailNav.classList.remove('hidden');
+        } else {
+            if (mainNav) mainNav.classList.remove('hidden');
+            if (detailNav) detailNav.classList.add('hidden');
+        }
+        if (screenId === 'screenMap') {
+            setTimeout(() => { if (mainMap) mainMap.invalidateSize(); }, 100);
+        } else if (screenId === 'screenDetail') {
+            switchDetailTab(appState.activeDetailTab || 'overview');
+        } else if (screenId === 'screenAnalytics') {
+            renderAnalyticsCharts();
+        } else if (screenId === 'screenAlerts') {
+            renderAlertsView();
+        }
+    }
+
+    function switchDetailTab(tabId) {
+        appState.activeDetailTab = tabId;
+
+        // Sync tab strip in Overview
+        document.querySelectorAll('.detail-tab-item').forEach(tab => {
+            if (tab.getAttribute('data-tab') === tabId) tab.classList.add('active');
+            else tab.classList.remove('active');
+        });
+
+        // Sync left sidebar sub-navigation
+        document.querySelectorAll('#detailNavList .sidebar-nav-item').forEach(item => {
+            if (item.getAttribute('data-tab') === tabId) item.classList.add('active');
+            else item.classList.remove('active');
+        });
+
+        // Hide all detail tab contents
+        document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.remove('active'));
+
+        const event = appState.events.find(e => e.event_id === appState.selectedEventId);
+
+        if (tabId === 'temporal') {
+            const target = document.getElementById('tabContentTemporal');
+            if (target) target.classList.add('active');
+            if (event) populateTemporalTab(event);
+        } else if (tabId === 'nearby') {
+            const target = document.getElementById('tabContentNearby');
+            if (target) target.classList.add('active');
+            if (event) populateNearbyTab(event);
+            setTimeout(() => { if (nearbyBufferMap) nearbyBufferMap.invalidateSize(); }, 120);
+        } else if (tabId === 'data') {
+            showScreen('screenData');
+        } else {
+            // Overview default
+            const target = document.getElementById('tabContentOverview');
+            if (target) target.classList.add('active');
+            if (event) populateOverviewTab(event);
+            setTimeout(() => { if (detailMap) detailMap.invalidateSize(); }, 120);
+        }
+    }
+
+    function showEventDetail(eventId) {
+        selectEvent(eventId, false);
+        showScreen('screenDetail');
+    }
+
+    function showMapExplorer() {
+        showScreen('screenMap');
+        document.querySelectorAll('#mainNavList .sidebar-nav-item').forEach(i => i.classList.remove('active'));
+        document.getElementById('navMap')?.classList.add('active');
+    }
+
+    function navigateAdjacentEvent(direction) {
+        if (!appState.filteredEvents || appState.filteredEvents.length === 0) return;
+        const currentIndex = appState.filteredEvents.findIndex(e => e.event_id === appState.selectedEventId);
+        let nextIndex = currentIndex + direction;
+        if (nextIndex < 0) nextIndex = appState.filteredEvents.length - 1;
+        if (nextIndex >= appState.filteredEvents.length) nextIndex = 0;
+        selectEvent(appState.filteredEvents[nextIndex].event_id, false);
+    }
+
+    // ----------------------------------------------------------------------
+    // 10. EVENT LISTENERS
+    // ----------------------------------------------------------------------
+    function initEventListeners() {
+        // Main Sidebar Navigation
+        document.querySelectorAll('#mainNavList .sidebar-nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('#mainNavList .sidebar-nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                const view = item.getAttribute('data-view');
+                if (view === 'map') showScreen('screenMap');
+                else if (view === 'analytics') showScreen('screenAnalytics');
+                else if (view === 'data') showScreen('screenData');
+                else if (view === 'alerts') showScreen('screenAlerts');
+                else {
+                    showToast(`Switched to ${view.toUpperCase()} view.`, 'info');
+                }
+            });
+        });
+
+        // Detail Sidebar Sub-Navigation
+        document.querySelectorAll('#detailNavList .sidebar-nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (item.id === 'sidebarBackToMap') {
+                    showMapExplorer();
+                    return;
+                }
+                const tab = item.getAttribute('data-tab');
+                if (tab) switchDetailTab(tab);
+            });
+        });
+
+        // Detail Tab Strip Items
+        document.querySelectorAll('.detail-tab-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                if (tabId) switchDetailTab(tabId);
+            });
+        });
+
+        // Search Input
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                appState.filters.search = e.target.value;
+                applyFilters();
+            });
+        }
+
+        // Category Filter Pills (In Events Subhead adjacent to events name)
+        document.querySelectorAll('#classFilterGroup .filter-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#classFilterGroup .filter-pill').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                appState.filters.classification = btn.getAttribute('data-class');
+                applyFilters();
+            });
+        });
+
+        // Sort by Dropdown Menu Controller
+        const sortBtn = document.getElementById('sortDropdownBtn');
+        const sortMenu = document.getElementById('sortDropdownMenu');
+        const sortChevron = document.getElementById('sortChevron');
+
+        if (sortBtn && sortMenu) {
+            sortBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isClosed = sortMenu.classList.contains('hidden');
+                if (isClosed) {
+                    sortMenu.classList.remove('hidden');
+                    sortChevron?.classList.add('rotate-180');
+                } else {
+                    sortMenu.classList.add('hidden');
+                    sortChevron?.classList.remove('rotate-180');
+                }
+            });
+
+            document.querySelectorAll('.sort-option-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const sortKey = item.getAttribute('data-sort');
+                    const sortLabel = item.getAttribute('data-label') || 'Risk';
+
+                    appState.currentSort = sortKey;
+                    const labelEl = document.getElementById('sortLabel');
+                    if (labelEl) labelEl.textContent = sortLabel;
+
+                    // Update UI active state and checkmarks
+                    document.querySelectorAll('.sort-option-item').forEach(i => {
+                        i.classList.remove('active', 'font-semibold');
+                        i.classList.add('font-medium', 'text-slate-600');
+                        i.querySelector('.sort-check')?.classList.add('hidden');
+                    });
+                    item.classList.add('active', 'font-semibold');
+                    item.classList.remove('font-medium', 'text-slate-600');
+                    item.querySelector('.sort-check')?.classList.remove('hidden');
+
+                    sortMenu.classList.add('hidden');
+                    sortChevron?.classList.remove('rotate-180');
+
+                    applyFilters();
+                    showToast(`Sorted by ${sortLabel}`, 'info');
+                });
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!sortMenu.contains(e.target) && !sortBtn.contains(e.target)) {
+                    sortMenu.classList.add('hidden');
+                    sortChevron?.classList.remove('rotate-180');
+                }
+            });
+
+            // Close on Escape
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !sortMenu.classList.contains('hidden')) {
+                    sortMenu.classList.add('hidden');
+                    sortChevron?.classList.remove('rotate-180');
+                }
+            });
+        }
+
+        // Drawer Layer Toggles
+        document.getElementById('toggleThermalHotspots')?.addEventListener('change', (e) => {
+            if (mainMap && mainMarkersLayer) {
+                if (e.target.checked) {
+                    mainMap.addLayer(mainMarkersLayer);
+                } else {
+                    mainMap.removeLayer(mainMarkersLayer);
+                }
+            }
+        });
+
+        document.getElementById('toggleIndustrialNodes')?.addEventListener('change', (e) => {
+            if (mainMap && mainFacilitiesLayer) {
+                if (e.target.checked) {
+                    mainMap.addLayer(mainFacilitiesLayer);
+                } else {
+                    mainMap.removeLayer(mainFacilitiesLayer);
+                }
+            }
+        });
+
+        // Drawer Basemap Buttons
+        document.getElementById('btnDrawerStreet')?.addEventListener('click', () => {
+            document.getElementById('btnDrawerStreet')?.classList.add('active');
+            document.getElementById('btnDrawerSat')?.classList.remove('active');
+            if (appState.activeTileLayer !== 'street') {
+                document.getElementById('btnToggleLayer')?.click();
+            }
+        });
+
+        document.getElementById('btnDrawerSat')?.addEventListener('click', () => {
+            document.getElementById('btnDrawerSat')?.classList.add('active');
+            document.getElementById('btnDrawerStreet')?.classList.remove('active');
+            if (appState.activeTileLayer !== 'satellite') {
+                document.getElementById('btnToggleLayer')?.click();
+            }
+        });
+
+        // Main Map Floating Controls
+        document.getElementById('btnZoomIn')?.addEventListener('click', () => mainMap?.zoomIn());
+        document.getElementById('btnZoomOut')?.addEventListener('click', () => mainMap?.zoomOut());
+        document.getElementById('btnRecenter')?.addEventListener('click', () => mainMap?.setView(DEFAULT_CENTER, DEFAULT_ZOOM));
+        document.getElementById('btnToggleLayer')?.addEventListener('click', () => {
+            if (appState.activeTileLayer === 'street') {
+                if (mainMap.hasLayer(mainTileLayers.street)) mainMap.removeLayer(mainTileLayers.street);
+                if (mainMap.hasLayer(mainTileLayers.dark)) mainMap.removeLayer(mainTileLayers.dark);
+                mainTileLayers.satellite.addTo(mainMap);
+                appState.activeTileLayer = 'satellite';
+                showToast('Switched to Satellite Imagery', 'info');
+            } else {
+                mainMap.removeLayer(mainTileLayers.satellite);
+                mainTileLayers.street.addTo(mainMap);
+                appState.activeTileLayer = 'street';
+                showToast('Switched to Street Basemap', 'info');
+            }
+        });
+
+        // Detail Navigation Controls
+        document.getElementById('btnBackToMap')?.addEventListener('click', () => showMapExplorer());
+        document.getElementById('btnPrevEvent')?.addEventListener('click', () => navigateAdjacentEvent(-1));
+        document.getElementById('btnNextEvent')?.addEventListener('click', () => navigateAdjacentEvent(1));
+
+        // Detail Satellite/Street Toggle
+        document.getElementById('btnDetailSat')?.addEventListener('click', () => {
+            document.getElementById('btnDetailSat').classList.add('active');
+            document.getElementById('btnDetailStreet').classList.remove('active');
+            if (detailMap) {
+                detailMap.removeLayer(detailTileLayers.street);
+                detailTileLayers.satellite.addTo(detailMap);
+            }
+        });
+        document.getElementById('btnDetailStreet')?.addEventListener('click', () => {
+            document.getElementById('btnDetailStreet').classList.add('active');
+            document.getElementById('btnDetailSat').classList.remove('active');
+            if (detailMap) {
+                detailMap.removeLayer(detailTileLayers.satellite);
+                detailTileLayers.street.addTo(detailMap);
+            }
+        });
+
+        // Copy Coordinates
+        document.getElementById('btnCopyCoords')?.addEventListener('click', () => {
+            const text = document.getElementById('detCoordsText').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Coordinates copied to clipboard!', 'success');
+            });
+        });
+
+        // Action Buttons
+        document.getElementById('btnWatchlist')?.addEventListener('click', () => {
+            showToast(`Added ${appState.selectedEventId} to Active Analyst Watchlist`, 'success');
+        });
+        document.getElementById('btnExportReport')?.addEventListener('click', () => {
+            showToast(`Generating PDF Compliance Report for ${appState.selectedEventId}...`, 'info');
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (mainMap) mainMap.invalidateSize();
+            if (detailMap) detailMap.invalidateSize();
+            if (nearbyBufferMap) nearbyBufferMap.invalidateSize();
+        });
+    }
+
+    // ----------------------------------------------------------------------
+    // 11. ANALYTICS CHARTS (Screen 3)
     // ----------------------------------------------------------------------
     function renderAnalyticsCharts() {
-        const events = appState.filteredEvents;
+        const events = appState.filteredEvents.length > 0 ? appState.filteredEvents : appState.events;
 
         const pieCtx = document.getElementById('chartAttributionPie')?.getContext('2d');
         if (pieCtx) {
@@ -816,10 +1445,10 @@
             charts.pie = new Chart(pieCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Industrial Flares', 'Natural Fires'],
-                    datasets: [{ data: [indCount, natCount], backgroundColor: ['#ff6b00', '#00e699'], borderColor: '#121829', borderWidth: 3 }]
+                    labels: ['Industrial Flares', 'Natural Wildfires'],
+                    datasets: [{ data: [indCount, natCount], backgroundColor: ['#ea580c', '#10b981'], borderWidth: 2 }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
         }
 
@@ -839,11 +1468,10 @@
                 type: 'bar',
                 data: {
                     labels: ['0-20 MW', '20-40 MW', '40-60 MW', '60-80 MW', '80+ MW'],
-                    datasets: [{ data: bins, backgroundColor: 'rgba(255, 107, 0, 0.75)', borderRadius: 4 }]
+                    datasets: [{ data: bins, backgroundColor: '#ea580c', borderRadius: 4 }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e2942' } }, y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e2942' } } },
                     plugins: { legend: { display: false } }
                 }
             });
@@ -859,459 +1487,789 @@
                 type: 'scatter',
                 data: {
                     datasets: [
-                        { label: 'Industrial Flares', data: indPoints, backgroundColor: '#ff6b00' },
-                        { label: 'Natural Wildfires', data: natPoints, backgroundColor: '#00e699' }
+                        { label: 'Industrial Flares', data: indPoints, backgroundColor: '#ea580c' },
+                        { label: 'Natural Wildfires', data: natPoints, backgroundColor: '#10b981' }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     scales: {
-                        x: { title: { display: true, text: 'Distance to Facility (km)', color: '#94a3b8' }, ticks: { color: '#94a3b8' }, grid: { color: '#1e2942' } },
-                        y: { title: { display: true, text: 'FRP Intensity (MW)', color: '#94a3b8' }, ticks: { color: '#94a3b8' }, grid: { color: '#1e2942' } }
-                    },
-                    plugins: { legend: { labels: { color: '#94a3b8' } } }
+                        x: { title: { display: true, text: 'Distance to Facility (km)' } },
+                        y: { title: { display: true, text: 'FRP Intensity (MW)' } }
+                    }
                 }
             });
         }
     }
 
     // ----------------------------------------------------------------------
-    // 10. SIMULATION ENGINE
+    // 12. TELEMETRY TABLE (Screen 4)
     // ----------------------------------------------------------------------
-    function calculateDistanceKm(lat1, lon1, lat2, lon2) {
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 100) / 100;
-    }
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        if (!tbody) return;
 
-    function runSimulationAttribution(lat, lon, frp, bt, landCover, satellite) {
-        let minDistance = 9999;
-        let nearestFacility = null;
+        tbody.innerHTML = appState.filteredEvents.map(e => {
+            const riskClass = e.risk_level === 'High Risk' ? 'high' : (e.risk_level === 'Medium Risk' ? 'medium' : 'low');
 
-        KNOWN_INDUSTRIAL_HUBS.forEach(hub => {
-            const dist = calculateDistanceKm(lat, lon, hub.lat, hub.lon);
-            if (dist < minDistance) {
-                minDistance = dist;
-                nearestFacility = hub;
-            }
-        });
+            return `
+                <tr class="hover:bg-slate-50 cursor-pointer transition-colors" data-id="${e.event_id}">
+                    <td class="p-3 font-mono font-semibold text-slate-800">${e.event_id}</td>
+                    <td class="p-3"><span class="risk-badge ${riskClass}">${e.risk_level}</span></td>
+                    <td class="p-3 font-mono font-semibold text-emerald-600">${Math.round(e.prediction_probability * 100)}%</td>
+                    <td class="p-3 font-mono text-slate-600">${e.latitude.toFixed(4)}°, ${e.longitude.toFixed(4)}°</td>
+                    <td class="p-3 font-bold text-slate-800">${e.frp} MW</td>
+                    <td class="p-3 text-slate-700">${e.nearest_industrial_facility || 'None in 5km'}</td>
+                    <td class="p-3 font-mono">${e.industrial_distance_km} km</td>
+                    <td class="p-3 font-semibold text-orange-600">${e.hotspot_count_30d}</td>
+                    <td class="p-3 text-slate-600">${e.land_cover || 'Built-up'}</td>
+                    <td class="p-3"><button class="px-2.5 py-1 text-[11px] font-semibold text-orange-600 border border-orange-200 bg-orange-50 hover:bg-orange-100 rounded btn-inspect-row" data-id="${e.event_id}">Inspect</button></td>
+                </tr>
+            `;
+        }).join('');
 
-        const isNearby = minDistance <= 2.0;
-        const isBuiltUp = landCover.includes('Built-up') || landCover.includes('Industrial');
-
-        let classification = 'NATURAL';
-        let confidence = 0.85;
-
-        if (isNearby || (isBuiltUp && frp > 35.0)) {
-            classification = 'INDUSTRIAL';
-            confidence = Math.min(0.88 + (isNearby ? 0.08 : 0.02), 0.98);
-        } else {
-            classification = 'NATURAL';
-            confidence = Math.min(0.86 + (minDistance > 10 ? 0.08 : 0.02), 0.97);
-        }
-
-        const newId = `SIM-FIRMS-${Date.now().toString().slice(-4)}`;
-        const newEvent = {
-            event_id: newId,
-            latitude: lat,
-            longitude: lon,
-            acq_date: new Date().toISOString().split('T')[0],
-            acq_time: "1200",
-            satellite: satellite,
-            frp: frp,
-            brightness_temperature: bt,
-            confidence: "high",
-            daynight: "D",
-            classification: classification,
-            prediction_probability: Math.round(confidence * 1000) / 1000,
-            model_version: "xgboost_v1_prototype",
-            nearest_industrial_facility: nearestFacility ? nearestFacility.name : null,
-            industrial_distance_km: minDistance,
-            industrial_nearby: isNearby,
-            hotspot_count_7d: isNearby ? 4 : 1,
-            hotspot_count_30d: isNearby ? 18 : 2,
-            hotspot_count_90d: isNearby ? 45 : 3,
-            land_cover: landCover,
-            reasons: [
-                `Proximity: ${minDistance} km to ${nearestFacility ? nearestFacility.name : 'nearest facility'}`,
-                `FRP Radiative signature: ${frp} MW`,
-                `Land cover zoning: ${landCover}`
-            ]
-        };
-
-        appState.events.unshift(newEvent);
-        appState.stats = computeStatsFromEvents(appState.events);
-        applyFilters();
-        selectEvent(newId, true);
-        showToast(`⚡ LIVE SIMULATION: Event ${newId} created & attributed!`, 'success');
-    }
-
-    // ----------------------------------------------------------------------
-    // 11. EVENT LISTENERS
-    // ----------------------------------------------------------------------
-    function initEventListeners() {
-        // Toggle Sidebar
-        const btnToggleSidebar = document.getElementById('btnToggleSidebar');
-        const controlPanel = document.getElementById('controlPanel');
-        if (btnToggleSidebar && controlPanel) {
-            btnToggleSidebar.addEventListener('click', () => {
-                controlPanel.classList.toggle('collapsed');
-                setTimeout(() => { if (map) map.invalidateSize(); }, 260);
-            });
-        }
-
-        // Live Poll Trigger Button in Header Status Chip
-        document.getElementById('systemStatusChip')?.addEventListener('click', () => {
-            loadDashboardData(true);
-        });
-
-        // Close Inspector
-        const btnCloseInspector = document.getElementById('btnCloseInspector');
-        const inspectorPanel = document.getElementById('inspectorPanel');
-        if (btnCloseInspector && inspectorPanel) {
-            btnCloseInspector.addEventListener('click', () => {
-                inspectorPanel.classList.toggle('collapsed');
-                setTimeout(() => { if (map) map.invalidateSize(); }, 260);
-            });
-        }
-
-        // View Tabs
-        document.querySelectorAll('.view-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                const view = tab.getAttribute('data-view');
-                appState.activeView = view;
-
-                document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-                if (view === 'map') {
-                    document.getElementById('viewMapContainer')?.classList.add('active');
-                    if (map) map.invalidateSize();
-                } else if (view === 'grid') {
-                    document.getElementById('viewGridContainer')?.classList.add('active');
-                } else if (view === 'analytics') {
-                    document.getElementById('viewAnalyticsContainer')?.classList.add('active');
-                    renderAnalyticsCharts();
-                }
-            });
-        });
-
-        // Search Input & Clear
-        const searchInput = document.getElementById('searchInput');
-        const clearSearchBtn = document.getElementById('clearSearchBtn');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                appState.filters.search = e.target.value;
-                if (clearSearchBtn) {
-                    if (e.target.value) clearSearchBtn.classList.remove('hidden');
-                    else clearSearchBtn.classList.add('hidden');
-                }
-                applyFilters();
-            });
-        }
-        if (clearSearchBtn) {
-            clearSearchBtn.addEventListener('click', () => {
-                if (searchInput) searchInput.value = '';
-                appState.filters.search = '';
-                clearSearchBtn.classList.add('hidden');
-                applyFilters();
-            });
-        }
-
-        // Classification Pills
-        document.querySelectorAll('#classFilterGroup .pill-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('#classFilterGroup .pill-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                appState.filters.classification = btn.getAttribute('data-class');
-                applyFilters();
-            });
-        });
-
-        // ----------------------------------------------------------------------
-        // SLIDER FILL HELPER — updates CSS custom property so the track shows
-        // a filled left-side gradient matching the thumb position.
-        // ----------------------------------------------------------------------
-        function updateSliderFill(slider) {
-            const min = parseFloat(slider.min);
-            const max = parseFloat(slider.max);
-            const val = parseFloat(slider.value);
-            const pct = ((val - min) / (max - min)) * 100;
-            slider.style.setProperty('--fill', `${pct}%`);
-        }
-
-        // Sliders & Controls
-        const frpSlider = document.getElementById('frpSlider');
-        if (frpSlider) {
-            updateSliderFill(frpSlider); // init
-            frpSlider.addEventListener('input', (e) => {
-                const val = parseFloat(e.target.value);
-                appState.filters.minFrp = val;
-                document.getElementById('frpSliderVal').textContent = `${val} MW`;
-                updateSliderFill(e.target);
-                applyFilters();
-            });
-        }
-
-        const confSlider = document.getElementById('confSlider');
-        if (confSlider) {
-            updateSliderFill(confSlider); // init
-            confSlider.addEventListener('input', (e) => {
-                const val = parseFloat(e.target.value);
-                appState.filters.minConfidence = val;
-                document.getElementById('confSliderVal').textContent = `${Math.round(val * 100)}%`;
-                updateSliderFill(e.target);
-                applyFilters();
-            });
-        }
-
-        document.getElementById('chkIndustrialOnly')?.addEventListener('change', (e) => {
-            appState.filters.industrialOnly = e.target.checked;
-            applyFilters();
-        });
-
-        document.getElementById('selectRecurrence')?.addEventListener('change', (e) => {
-            appState.filters.recurrence = e.target.value;
-            applyFilters();
-        });
-
-        document.getElementById('btnResetFilters')?.addEventListener('click', () => {
-            appState.filters = { search: '', classification: 'ALL', minFrp: 0, minConfidence: 0.5, industrialOnly: false, recurrence: 'all' };
-            if (searchInput) searchInput.value = '';
-            if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
-            if (frpSlider) { frpSlider.value = 0; updateSliderFill(frpSlider); }
-            document.getElementById('frpSliderVal').textContent = '0 MW';
-            if (confSlider) { confSlider.value = 0.5; updateSliderFill(confSlider); }
-            document.getElementById('confSliderVal').textContent = '50%';
-            document.getElementById('chkIndustrialOnly').checked = false;
-            document.getElementById('selectRecurrence').value = 'all';
-            document.querySelectorAll('#classFilterGroup .pill-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('#classFilterGroup [data-class="ALL"]')?.classList.add('active');
-            applyFilters();
-            showToast('Filters reset', 'info');
-        });
-
-        // ----------------------------------------------------------------------
-        // BASEMAP SWITCHER (TOP BAR TOGGLE & MAP DROPDOWN)
-        // ----------------------------------------------------------------------
-        function switchBasemap(tileType) {
-            if (!tileLayers[tileType] || tileType === appState.activeTileLayer) return;
-
-            if (tileLayers[appState.activeTileLayer] && map) {
-                map.removeLayer(tileLayers[appState.activeTileLayer]);
-            }
-            appState.activeTileLayer = tileType;
-            if (tileLayers[tileType] && map) {
-                tileLayers[tileType].addTo(map);
-            }
-
-            // Sync Top Bar Toggle Button
-            document.querySelectorAll('.basemap-toggle-btn').forEach(b => {
-                const isTarget = b.getAttribute('data-tile') === tileType;
-                b.classList.toggle('active', isTarget);
-                b.classList.toggle('bg-brand-panel', isTarget);
-                b.classList.toggle('text-white', isTarget);
-                b.classList.toggle('shadow-sm', isTarget);
-                b.classList.toggle('text-slate-400', !isTarget);
-            });
-
-            // Sync Floating Map Dropdown
-            document.querySelectorAll('.basemap-option-btn').forEach(b => {
-                const isTarget = b.getAttribute('data-tile') === tileType;
-                b.classList.toggle('active', isTarget);
-                b.classList.toggle('text-white', isTarget);
-                b.classList.toggle('bg-brand-panel', isTarget);
-                b.classList.toggle('border-brand-borderLight/60', isTarget);
-                b.classList.toggle('border-transparent', !isTarget);
-                b.classList.toggle('text-slate-300', !isTarget);
-                const check = b.querySelector('[data-lucide="check"]');
-                if (check) check.classList.toggle('hidden', !isTarget);
-            });
-
-            const activeBasemapLabel = document.getElementById('activeBasemapLabel');
-            if (activeBasemapLabel) {
-                activeBasemapLabel.textContent = tileType === 'street' ? 'Street View' : 'Satellite View';
-            }
-
-            showToast(`Basemap mode: ${tileType === 'street' ? 'Street View' : 'Satellite Imagery'}`, 'info');
-        }
-
-        // Top Bar Toggle Click Handlers
-        document.querySelectorAll('.basemap-toggle-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tileType = btn.getAttribute('data-tile');
-                switchBasemap(tileType);
-            });
-        });
-
-        // Floating Map Dropdown Control
-        const btnBasemapDropdown = document.getElementById('btnBasemapDropdown');
-        const basemapDropdownMenu = document.getElementById('basemapDropdownMenu');
-        const basemapChevron = document.getElementById('basemapChevron');
-
-        if (btnBasemapDropdown && basemapDropdownMenu) {
-            btnBasemapDropdown.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isClosed = basemapDropdownMenu.classList.contains('hidden');
-                if (isClosed) {
-                    basemapDropdownMenu.classList.remove('hidden');
-                    if (basemapChevron) basemapChevron.style.transform = 'rotate(180deg)';
-                } else {
-                    basemapDropdownMenu.classList.add('hidden');
-                    if (basemapChevron) basemapChevron.style.transform = 'rotate(0deg)';
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!btnBasemapDropdown.contains(e.target) && !basemapDropdownMenu.contains(e.target)) {
-                    basemapDropdownMenu.classList.add('hidden');
-                    if (basemapChevron) basemapChevron.style.transform = 'rotate(0deg)';
-                }
-            });
-        }
-
-        // Floating Map Dropdown Item Click Handlers
-        document.querySelectorAll('.basemap-option-btn').forEach(btn => {
+        tbody.querySelectorAll('.btn-inspect-row').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const tileType = btn.getAttribute('data-tile');
-                switchBasemap(tileType);
-                basemapDropdownMenu?.classList.add('hidden');
-                if (basemapChevron) basemapChevron.style.transform = 'rotate(0deg)';
+                const id = btn.getAttribute('data-id');
+                showEventDetail(id);
             });
         });
 
-        // Overlay Switches
-        document.getElementById('toggleIndustrialNodes')?.addEventListener('change', (e) => {
-            appState.layers.industrialNodes = e.target.checked;
-            renderIndustrialFacilities();
-        });
-
-        document.getElementById('toggleBufferRings')?.addEventListener('change', (e) => {
-            appState.layers.bufferRings = e.target.checked;
-            renderIndustrialFacilities();
-        });
-
-        document.getElementById('toggleFrpPulse')?.addEventListener('change', (e) => {
-            appState.layers.frpPulse = e.target.checked;
-            renderMapMarkers();
-        });
-
-        // Inspector Zoom & Copy GeoJSON
-        document.getElementById('btnZoomToMap')?.addEventListener('click', () => {
-            if (appState.selectedEventId) {
-                const e = appState.events.find(ev => ev.event_id === appState.selectedEventId);
-                if (e && map) {
-                    document.getElementById('tabViewMap')?.click();
-                    map.flyTo([e.latitude, e.longitude], 13, { duration: 1.0 });
-                }
-            }
-        });
-
-        document.getElementById('btnCopyGeoJson')?.addEventListener('click', () => {
-            if (appState.selectedEventId) {
-                const e = appState.events.find(ev => ev.event_id === appState.selectedEventId);
-                if (e) {
-                    const geojson = { type: "Feature", geometry: { type: "Point", coordinates: [e.longitude, e.latitude] }, properties: e };
-                    navigator.clipboard.writeText(JSON.stringify(geojson, null, 2));
-                    showToast('GeoJSON copied to clipboard!', 'success');
-                }
-            }
-        });
-
-        // Fit View / Recenter Map Button
-        document.getElementById('btnFitBounds')?.addEventListener('click', fitHotspotsView);
-
-        // Global Keyboard Shortcuts for Map Interactivity
-        window.addEventListener('keydown', (e) => {
-            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
-            if (e.key === 'Escape') {
-                if (map) map.closePopup();
-                if (proximityVectorLayer && map) {
-                    map.removeLayer(proximityVectorLayer);
-                    proximityVectorLayer = null;
-                }
-            } else if (e.key === '+' || e.key === '=') {
-                if (map) map.zoomIn();
-            } else if (e.key === '-') {
-                if (map) map.zoomOut();
-            }
-        });
-
-        document.getElementById('btnExportData')?.addEventListener('click', () => exportToCSV(appState.filteredEvents));
-
-        // Modal
-        const simModal = document.getElementById('simulateModal');
-        document.getElementById('btnSimulateModal')?.addEventListener('click', () => simModal?.classList.remove('hidden'));
-        document.getElementById('btnCloseSimModal')?.addEventListener('click', () => simModal?.classList.add('hidden'));
-        document.getElementById('btnCancelSim')?.addEventListener('click', () => simModal?.classList.add('hidden'));
-
-        document.getElementById('simForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const lat = parseFloat(document.getElementById('simLat').value);
-            const lon = parseFloat(document.getElementById('simLon').value);
-            const frp = parseFloat(document.getElementById('simFrp').value);
-            const bt = parseFloat(document.getElementById('simBt').value);
-            const landCover = document.getElementById('simLandCover').value;
-            const satellite = document.getElementById('simSatellite').value;
-
-            runSimulationAttribution(lat, lon, frp, bt, landCover, satellite);
-            simModal?.classList.add('hidden');
+        tbody.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', () => {
+                const id = row.getAttribute('data-id');
+                showEventDetail(id);
+            });
         });
     }
 
-    // UX Life Improvement: Recenter map to frame all active hotspots & facilities
-    function fitHotspotsView() {
-        if (!map) return;
-        const points = [];
-        appState.filteredEvents.forEach(e => points.push([e.latitude, e.longitude]));
-        if (appState.layers.industrialNodes) {
-            KNOWN_INDUSTRIAL_HUBS.forEach(h => points.push([h.lat, h.lon]));
+    // ----------------------------------------------------------------------
+    // 13. THEME MANAGEMENT (DARK MODE TOGGLE)
+    // ----------------------------------------------------------------------
+    function initTheme() {
+        const checkbox = document.getElementById('themeToggleCheckbox');
+        const savedTheme = localStorage.getItem('thermasight_theme') || 'light';
+        const isDark = savedTheme === 'dark';
+
+        if (checkbox) {
+            checkbox.checked = isDark;
+            applyTheme(isDark);
+
+            checkbox.addEventListener('change', (e) => {
+                const dark = e.target.checked;
+                applyTheme(dark);
+                localStorage.setItem('thermasight_theme', dark ? 'dark' : 'light');
+                showToast(dark ? 'Dark Mode Enabled' : 'Light Mode Enabled', 'info');
+            });
         }
-        if (points.length > 0) {
-            const bounds = L.latLngBounds(points);
-            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 13, animate: true });
-            showToast(`Framed ${appState.filteredEvents.length} active thermal anomalies`, 'info');
+    }
+
+    function applyTheme(isDark) {
+        const moonIcon = document.getElementById('themeIconMoon');
+        const sunIcon = document.getElementById('themeIconSun');
+        const labelText = document.getElementById('themeLabelText');
+
+        if (isDark) {
+            document.body.classList.add('dark-theme');
+            if (moonIcon) moonIcon.classList.add('hidden');
+            if (sunIcon) sunIcon.classList.remove('hidden');
+            if (labelText) labelText.textContent = 'Light Mode';
         } else {
-            map.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, { duration: 1.0 });
+            document.body.classList.remove('dark-theme');
+            if (moonIcon) moonIcon.classList.remove('hidden');
+            if (sunIcon) sunIcon.classList.add('hidden');
+            if (labelText) labelText.textContent = 'Dark Mode';
         }
     }
 
-    function exportToCSV(events) {
-        if (!events || events.length === 0) return;
-        const headers = ["event_id", "classification", "prediction_probability", "latitude", "longitude", "frp", "nearest_facility", "distance_km", "hotspots_30d", "land_cover"];
-        const rows = events.map(e => [
-            e.event_id, e.classification, e.prediction_probability, e.latitude, e.longitude, e.frp,
-            `"${e.nearest_industrial_facility || ''}"`, e.industrial_distance_km, e.hotspot_count_30d, `"${e.land_cover || ''}"`
-        ]);
-        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-        const link = document.createElement("a");
-        link.setAttribute("href", encodeURI(csvContent));
-        link.setAttribute("download", `ThermaSight_Export_${Date.now()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showToast(`Exported ${events.length} events to CSV!`, 'success');
+    // ----------------------------------------------------------------------
+    // 15. ALERTS SYSTEM MODULE (LIVE ENGINE)
+    // ----------------------------------------------------------------------
+    let alertInspectorMap = null;
+
+    function initAlertsData() {
+        const generatedAlerts = [
+            {
+                id: 'FIRMS-IND-2025-001',
+                desc: 'High thermal activity near industrial facility',
+                facility: 'Gujarat Refinery',
+                city: 'Jamnagar',
+                state: 'Gujarat',
+                risk: 'High',
+                classification: 'Industrial / Persistent',
+                type: 'Industrial',
+                source: 'VIIRS',
+                frp: 64.2,
+                detections: 24,
+                date: '12 May 2025',
+                time: '13:30 UTC',
+                status: 'New',
+                confidence: 94,
+                distance: 0.22,
+                lat: 22.3872,
+                lon: 73.1812,
+                reasons: [
+                    { icon: 'factory', color: 'emerald', text: 'Within 300 m of industrial facility' },
+                    { icon: 'flame', color: 'amber', text: 'High temporal persistence (24 detections in 30 days)' },
+                    { icon: 'alert-triangle', color: 'red', text: 'Elevated FRP thermal signature' },
+                    { icon: 'building-2', color: 'amber', text: 'Located in built-up / industrial area' }
+                ]
+            },
+            {
+                id: 'FIRMS-IND-2025-002',
+                desc: 'Persistent thermal source',
+                facility: 'Reliance Petrochemicals',
+                city: 'Jamnagar',
+                state: 'Gujarat',
+                risk: 'High',
+                classification: 'Industrial / Persistent',
+                type: 'Industrial',
+                source: 'VIIRS',
+                frp: 48.7,
+                detections: 19,
+                date: '12 May 2025',
+                time: '11:20 UTC',
+                status: 'New',
+                confidence: 91,
+                distance: 1.4,
+                lat: 22.395,
+                lon: 73.195,
+                reasons: [
+                    { icon: 'factory', color: 'emerald', text: 'Within 1.5 km of major petrochemical cluster' },
+                    { icon: 'flame', color: 'amber', text: 'Repetitive flare signature (19 detections in 30 days)' },
+                    { icon: 'alert-triangle', color: 'red', text: 'FRP exceeds industrial baseline threshold' }
+                ]
+            },
+            {
+                id: 'FIRMS-NAT-2025-003',
+                desc: 'Thermal activity in forest area',
+                facility: 'Similipal Forest',
+                city: 'Mayurbhanj',
+                state: 'Odisha',
+                risk: 'Medium',
+                classification: 'Natural / Biomass',
+                type: 'Biomass',
+                source: 'MODIS',
+                frp: 32.1,
+                detections: 12,
+                date: '12 May 2025',
+                time: '09:15 UTC',
+                status: 'Acknowledged',
+                confidence: 82,
+                distance: 4.8,
+                lat: 21.85,
+                lon: 86.35,
+                reasons: [
+                    { icon: 'trees', color: 'emerald', text: 'Located inside national biosphere corridor' },
+                    { icon: 'flame', color: 'amber', text: 'Seasonal biomass dry-season fire cluster' }
+                ]
+            },
+            {
+                id: 'FIRMS-IND-2025-004',
+                desc: 'Quarry area thermal signature',
+                facility: 'Kutch Quarry',
+                city: 'Kutch',
+                state: 'Gujarat',
+                risk: 'Medium',
+                classification: 'Industrial / Quarry',
+                type: 'Quarry',
+                source: 'VIIRS',
+                frp: 28.4,
+                detections: 10,
+                date: '12 May 2025',
+                time: '08:40 UTC',
+                status: 'New',
+                confidence: 79,
+                distance: 0.8,
+                lat: 23.25,
+                lon: 69.65,
+                reasons: [
+                    { icon: 'mountain', color: 'purple', text: 'Located within active open-cast quarry zone' },
+                    { icon: 'flame', color: 'amber', text: 'Surface blasting / equipment thermal reflection' }
+                ]
+            },
+            {
+                id: 'FIRMS-IND-2025-005',
+                desc: 'Clustered thermal activity',
+                facility: 'Vedanta Plant',
+                city: 'Jharsuguda',
+                state: 'Odisha',
+                risk: 'Medium',
+                classification: 'Industrial / Persistent',
+                type: 'Industrial',
+                source: 'VIIRS',
+                frp: 26.8,
+                detections: 9,
+                date: '11 May 2025',
+                time: '22:10 UTC',
+                status: 'New',
+                confidence: 76,
+                distance: 1.8,
+                lat: 21.82,
+                lon: 84.05,
+                reasons: [
+                    { icon: 'factory', color: 'emerald', text: 'Close to smelting furnace exhaust stacks' },
+                    { icon: 'flame', color: 'amber', text: 'Consistent night-time heat emissions' }
+                ]
+            },
+            {
+                id: 'FIRMS-NAT-2025-006',
+                desc: 'Wildfire indication',
+                facility: 'Nagarjunsagar Forest',
+                city: 'Nalgonda',
+                state: 'Telangana',
+                risk: 'Low',
+                classification: 'Natural / Biomass',
+                type: 'Biomass',
+                source: 'VIIRS',
+                frp: 18.2,
+                detections: 6,
+                date: '11 May 2025',
+                time: '18:45 UTC',
+                status: 'Acknowledged',
+                confidence: 71,
+                distance: 6.2,
+                lat: 16.58,
+                lon: 79.31,
+                reasons: [
+                    { icon: 'trees', color: 'emerald', text: 'Scrubland thermal detection away from infrastructure' }
+                ]
+            },
+            {
+                id: 'FIRMS-IND-2025-007',
+                desc: 'Thermal source near industrial area',
+                facility: 'Chennai Port',
+                city: 'Chennai',
+                state: 'Tamil Nadu',
+                risk: 'Low',
+                classification: 'Industrial / Port',
+                type: 'Industrial',
+                source: 'VIIRS',
+                frp: 16.9,
+                detections: 5,
+                date: '11 May 2025',
+                time: '16:20 UTC',
+                status: 'New',
+                confidence: 68,
+                distance: 2.1,
+                lat: 13.08,
+                lon: 80.29,
+                reasons: [
+                    { icon: 'factory', color: 'emerald', text: 'Port perimeter thermal storage area' }
+                ]
+            },
+            {
+                id: 'FIRMS-IND-2025-008',
+                desc: 'Elevated thermal signature',
+                facility: 'Bengaluru Industrial Area',
+                city: 'Bengaluru',
+                state: 'Karnataka',
+                risk: 'Low',
+                classification: 'Industrial / Manufacturing',
+                type: 'Industrial',
+                source: 'VIIRS',
+                frp: 14.6,
+                detections: 4,
+                date: '11 May 2025',
+                time: '14:10 UTC',
+                status: 'Resolved',
+                confidence: 65,
+                distance: 3.4,
+                lat: 12.97,
+                lon: 77.59,
+                reasons: [
+                    { icon: 'factory', color: 'emerald', text: 'Verified routine foundry operation' }
+                ]
+            }
+        ];
+
+        // Seed remaining items to precisely total 27 Active (8 High, 12 Med, 7 Low), 5 Ack, 18 Resolved (50 total)
+        const additionalMockData = [
+            // High Risk Active (6 more to reach 8 total High)
+            { id: 'FIRMS-IND-2025-009', desc: 'Continuous petrochemical furnace exhaust', facility: 'Mundra Chemical Complex', city: 'Kutch', state: 'Gujarat', risk: 'High', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 58.3, detections: 22, date: '11 May 2025', time: '12:00 UTC', status: 'New', confidence: 93, distance: 0.45, lat: 22.84, lon: 69.71 },
+            { id: 'FIRMS-IND-2025-010', desc: 'Critical flare emission alert', facility: 'Essar Oil Terminal', city: 'Jamnagar', state: 'Gujarat', risk: 'High', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 54.1, detections: 20, date: '11 May 2025', time: '09:40 UTC', status: 'New', confidence: 90, distance: 0.62, lat: 22.42, lon: 70.02 },
+            { id: 'FIRMS-IND-2025-011', desc: 'Unusual blast furnace spike', facility: 'Bhilai Steelworks', city: 'Durg', state: 'Chhattisgarh', risk: 'High', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 72.8, detections: 28, date: '10 May 2025', time: '23:15 UTC', status: 'New', confidence: 96, distance: 0.18, lat: 21.19, lon: 81.35 },
+            { id: 'FIRMS-IND-2025-012', desc: 'Coke oven elevated temperature', facility: 'Rourkela Steel Plant', city: 'Sundargarh', state: 'Odisha', risk: 'High', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 61.4, detections: 25, date: '10 May 2025', time: '20:30 UTC', status: 'New', confidence: 92, distance: 0.35, lat: 22.22, lon: 84.86 },
+            { id: 'FIRMS-IND-2025-013', desc: 'Thermal exhaust cluster detected', facility: 'Angul Power Plant', city: 'Angul', state: 'Odisha', risk: 'High', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 69.0, detections: 27, date: '10 May 2025', time: '17:10 UTC', status: 'New', confidence: 95, distance: 0.28, lat: 20.88, lon: 85.15 },
+            { id: 'FIRMS-IND-2025-014', desc: 'Superthermal cluster violation', facility: 'Singrauli Super Thermal Station', city: 'Singrauli', state: 'Madhya Pradesh', risk: 'High', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 85.6, detections: 34, date: '10 May 2025', time: '14:20 UTC', status: 'New', confidence: 98, distance: 0.15, lat: 24.20, lon: 82.66 },
+
+            // Medium Risk Active (9 more to reach 12 total Medium)
+            { id: 'FIRMS-IND-2025-015', desc: 'Moderate thermal anomaly', facility: 'Paradeep Phosphate Plant', city: 'Jagatsinghpur', state: 'Odisha', risk: 'Medium', classification: 'Industrial / Chemical', type: 'Industrial', source: 'VIIRS', frp: 29.5, detections: 11, date: '10 May 2025', time: '11:05 UTC', status: 'New', confidence: 80, distance: 1.2, lat: 20.26, lon: 86.66 },
+            { id: 'FIRMS-IND-2025-016', desc: 'Kiln heat discharge', facility: 'Ambuja Cement Kiln', city: 'Kodinar', state: 'Gujarat', risk: 'Medium', classification: 'Industrial / Cement', type: 'Industrial', source: 'VIIRS', frp: 31.0, detections: 13, date: '09 May 2025', time: '22:45 UTC', status: 'New', confidence: 83, distance: 1.6, lat: 20.79, lon: 70.70 },
+            { id: 'FIRMS-IND-2025-017', desc: 'Quarry operations thermal signature', facility: 'Banni Limestone Quarry', city: 'Kutch', state: 'Gujarat', risk: 'Medium', classification: 'Industrial / Quarry', type: 'Quarry', source: 'VIIRS', frp: 24.5, detections: 8, date: '09 May 2025', time: '19:15 UTC', status: 'New', confidence: 75, distance: 0.9, lat: 23.45, lon: 69.80 },
+            { id: 'FIRMS-IND-2025-018', desc: 'Repeated agricultural burn', facility: 'Karnal Agricultural Zone', city: 'Karnal', state: 'Haryana', risk: 'Medium', classification: 'Natural / Biomass', type: 'Biomass', source: 'VIIRS', frp: 33.2, detections: 14, date: '09 May 2025', time: '15:50 UTC', status: 'New', confidence: 84, distance: 5.2, lat: 29.68, lon: 76.98 },
+            { id: 'FIRMS-IND-2025-019', desc: 'Stubble burn near highway', facility: 'Sangrur Crop Fields', city: 'Sangrur', state: 'Punjab', risk: 'Medium', classification: 'Natural / Biomass', type: 'Biomass', source: 'MODIS', frp: 27.8, detections: 10, date: '09 May 2025', time: '13:20 UTC', status: 'New', confidence: 78, distance: 4.1, lat: 30.24, lon: 75.84 },
+            { id: 'FIRMS-IND-2025-020', desc: 'Industrial foundry exhaust', facility: 'Coimbatore Foundry Estate', city: 'Coimbatore', state: 'Tamil Nadu', risk: 'Medium', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 25.1, detections: 9, date: '08 May 2025', time: '21:40 UTC', status: 'New', confidence: 77, distance: 2.0, lat: 11.01, lon: 76.96 },
+            { id: 'FIRMS-IND-2025-021', desc: 'Petroleum refinery flare stack', facility: 'Kochi Refinery', city: 'Ernakulam', state: 'Kerala', risk: 'Medium', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 30.4, detections: 12, date: '08 May 2025', time: '18:10 UTC', status: 'New', confidence: 81, distance: 1.1, lat: 9.98, lon: 76.35 },
+            { id: 'FIRMS-IND-2025-022', desc: 'Quarry blasting thermal flare', facility: 'Rapar Quarry', city: 'Kutch', state: 'Gujarat', risk: 'Medium', classification: 'Industrial / Quarry', type: 'Quarry', source: 'VIIRS', frp: 22.9, detections: 8, date: '08 May 2025', time: '14:35 UTC', status: 'New', confidence: 74, distance: 0.7, lat: 23.57, lon: 70.63 },
+            { id: 'FIRMS-IND-2025-023', desc: 'Chemical reactor heat plume', facility: 'Dahej Chemical SEZ', city: 'Bharuch', state: 'Gujarat', risk: 'Medium', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 34.6, detections: 15, date: '08 May 2025', time: '10:00 UTC', status: 'New', confidence: 85, distance: 1.3, lat: 21.71, lon: 72.58 },
+
+            // Low Risk Active (5 more to reach 7 total Low)
+            { id: 'FIRMS-IND-2025-024', desc: 'Low intensity thermal reflection', facility: 'Nagpur Solar Park', city: 'Nagpur', state: 'Maharashtra', risk: 'Low', classification: 'Natural / Surface', type: 'Biomass', source: 'VIIRS', frp: 12.4, detections: 3, date: '07 May 2025', time: '16:45 UTC', status: 'New', confidence: 62, distance: 7.5, lat: 21.14, lon: 79.08 },
+            { id: 'FIRMS-IND-2025-025', desc: 'Transient scrubland thermal hit', facility: 'Jaisalmer Desert Tract', city: 'Jaisalmer', state: 'Rajasthan', risk: 'Low', classification: 'Natural / Biomass', type: 'Biomass', source: 'VIIRS', frp: 15.0, detections: 4, date: '07 May 2025', time: '13:10 UTC', status: 'New', confidence: 66, distance: 8.2, lat: 26.91, lon: 70.91 },
+            { id: 'FIRMS-IND-2025-026', desc: 'Dispersed heat trace', facility: 'Guntur Rural Outskirts', city: 'Guntur', state: 'Andhra Pradesh', risk: 'Low', classification: 'Natural / Biomass', type: 'Biomass', source: 'MODIS', frp: 11.8, detections: 3, date: '07 May 2025', time: '09:25 UTC', status: 'New', confidence: 60, distance: 5.9, lat: 16.30, lon: 80.43 },
+            { id: 'FIRMS-IND-2025-027', desc: 'Minor furnace chimney hit', facility: 'Kanpur Tannery Cluster', city: 'Kanpur', state: 'Uttar Pradesh', risk: 'Low', classification: 'Industrial / Light', type: 'Industrial', source: 'VIIRS', frp: 13.9, detections: 4, date: '06 May 2025', time: '19:50 UTC', status: 'New', confidence: 64, distance: 2.8, lat: 26.44, lon: 80.33 },
+            { id: 'FIRMS-IND-2025-028', desc: 'Small biomass campfire cluster', facility: 'Satpura Tiger Reserve Fringe', city: 'Hoshangabad', state: 'Madhya Pradesh', risk: 'Low', classification: 'Natural / Biomass', type: 'Biomass', source: 'VIIRS', frp: 10.2, detections: 2, date: '06 May 2025', time: '15:15 UTC', status: 'New', confidence: 58, distance: 9.4, lat: 22.45, lon: 78.20 },
+
+            // Acknowledged (3 more to reach 5 total Acknowledged)
+            { id: 'FIRMS-IND-2025-029', desc: 'Controlled refinery flaring', facility: 'Visakhapatnam Refinery', city: 'Visakhapatnam', state: 'Andhra Pradesh', risk: 'High', classification: 'Industrial / Persistent', type: 'Industrial', source: 'VIIRS', frp: 45.2, detections: 18, date: '06 May 2025', time: '11:40 UTC', status: 'Acknowledged', confidence: 89, distance: 0.55, lat: 17.68, lon: 83.21 },
+            { id: 'FIRMS-IND-2025-030', desc: 'Permitted waste incinerator run', facility: 'Surat Municipal Plant', city: 'Surat', state: 'Gujarat', risk: 'Medium', classification: 'Industrial / Utility', type: 'Industrial', source: 'VIIRS', frp: 26.0, detections: 8, date: '05 May 2025', time: '18:20 UTC', status: 'Acknowledged', confidence: 77, distance: 1.9, lat: 21.17, lon: 72.83 },
+            { id: 'FIRMS-IND-2025-031', desc: 'Seasonal controlled burn in forestry parcel', facility: 'Wayand Forest Border', city: 'Wayanad', state: 'Kerala', risk: 'Low', classification: 'Natural / Forestry', type: 'Biomass', source: 'MODIS', frp: 16.5, detections: 5, date: '05 May 2025', time: '12:00 UTC', status: 'Acknowledged', confidence: 69, distance: 6.8, lat: 11.68, lon: 76.13 },
+
+            // Resolved (17 more to reach 18 total Resolved)
+            { id: 'FIRMS-IND-2025-032', desc: 'Resolved: Routine pipeline flaring test', facility: 'Barmer Cairn Oil Field', city: 'Barmer', state: 'Rajasthan', risk: 'High', classification: 'Industrial / Oil', type: 'Industrial', source: 'VIIRS', frp: 52.0, detections: 17, date: '05 May 2025', time: '08:30 UTC', status: 'Resolved', confidence: 88, distance: 0.9, lat: 25.75, lon: 71.39 },
+            { id: 'FIRMS-IND-2025-033', desc: 'Resolved: Extinguished field burn', facility: 'Patiala Paddy Field', city: 'Patiala', state: 'Punjab', risk: 'Medium', classification: 'Natural / Biomass', type: 'Biomass', source: 'VIIRS', frp: 28.1, detections: 9, date: '04 May 2025', time: '17:15 UTC', status: 'Resolved', confidence: 79, distance: 4.5, lat: 30.33, lon: 76.38 },
+            { id: 'FIRMS-IND-2025-034', desc: 'Resolved: Controlled furnace relining', facility: 'Jamshedpur Tata Steel', city: 'Jamshedpur', state: 'Jharkhand', risk: 'High', classification: 'Industrial / Steel', type: 'Industrial', source: 'VIIRS', frp: 60.5, detections: 23, date: '04 May 2025', time: '14:00 UTC', status: 'Resolved', confidence: 91, distance: 0.3, lat: 22.80, lon: 86.20 },
+            { id: 'FIRMS-IND-2025-035', desc: 'Resolved: Quarry dust reflection clear', facility: 'Makrana Marble Quarry', city: 'Nagaur', state: 'Rajasthan', risk: 'Low', classification: 'Industrial / Quarry', type: 'Quarry', source: 'VIIRS', frp: 13.2, detections: 3, date: '04 May 2025', time: '10:45 UTC', status: 'Resolved', confidence: 63, distance: 0.8, lat: 27.04, lon: 74.72 },
+            { id: 'FIRMS-IND-2025-036', desc: 'Resolved: Forest guard verified campfire', facility: 'Bandipur Buffer', city: 'Chamarajanagar', state: 'Karnataka', risk: 'Low', classification: 'Natural / Biomass', type: 'Biomass', source: 'VIIRS', frp: 12.0, detections: 3, date: '03 May 2025', time: '20:10 UTC', status: 'Resolved', confidence: 61, distance: 7.2, lat: 11.66, lon: 76.63 },
+            { id: 'FIRMS-IND-2025-037', desc: 'Resolved: Power station maintenance completed', facility: 'Korba Super Thermal', city: 'Korba', state: 'Chhattisgarh', risk: 'High', classification: 'Industrial / Power', type: 'Industrial', source: 'VIIRS', frp: 55.4, detections: 21, date: '03 May 2025', time: '15:25 UTC', status: 'Resolved', confidence: 90, distance: 0.4, lat: 22.35, lon: 82.68 },
+            { id: 'FIRMS-IND-2025-038', desc: 'Resolved: Boiler inspection anomaly resolved', facility: 'Neyveli Lignite Power', city: 'Cuddalore', state: 'Tamil Nadu', risk: 'Medium', classification: 'Industrial / Power', type: 'Industrial', source: 'VIIRS', frp: 27.0, detections: 8, date: '03 May 2025', time: '11:00 UTC', status: 'Resolved', confidence: 78, distance: 1.0, lat: 11.59, lon: 79.48 },
+            { id: 'FIRMS-IND-2025-039', desc: 'Resolved: Smelting cycle completed', facility: 'Hindustan Zinc Chanderiya', city: 'Chittorgarh', state: 'Rajasthan', risk: 'Medium', classification: 'Industrial / Smelter', type: 'Industrial', source: 'VIIRS', frp: 30.1, detections: 11, date: '02 May 2025', time: '18:50 UTC', status: 'Resolved', confidence: 82, distance: 0.7, lat: 24.83, lon: 74.63 },
+            { id: 'FIRMS-IND-2025-040', desc: 'Resolved: Asphalt plant roadwork cooled down', facility: 'Hubli Roadworks Plant', city: 'Dharwad', state: 'Karnataka', risk: 'Low', classification: 'Industrial / Construction', type: 'Industrial', source: 'VIIRS', frp: 14.0, detections: 4, date: '02 May 2025', time: '14:15 UTC', status: 'Resolved', confidence: 65, distance: 2.5, lat: 15.36, lon: 75.12 },
+            { id: 'FIRMS-IND-2025-041', desc: 'Resolved: Crop clearing extinguished', facility: 'Bhatinda Farm Zone', city: 'Bhatinda', state: 'Punjab', risk: 'Medium', classification: 'Natural / Biomass', type: 'Biomass', source: 'VIIRS', frp: 25.4, detections: 7, date: '02 May 2025', time: '09:30 UTC', status: 'Resolved', confidence: 76, distance: 5.0, lat: 30.21, lon: 74.94 },
+            { id: 'FIRMS-IND-2025-042', desc: 'Resolved: Fertilizer boiler vent cleared', facility: 'IFFCO Kalol Complex', city: 'Gandhinagar', state: 'Gujarat', risk: 'Medium', classification: 'Industrial / Chemical', type: 'Industrial', source: 'VIIRS', frp: 26.5, detections: 8, date: '01 May 2025', time: '21:00 UTC', status: 'Resolved', confidence: 78, distance: 1.2, lat: 23.23, lon: 72.49 },
+            { id: 'FIRMS-IND-2025-043', desc: 'Resolved: Port cargo heat dissipation checked', facility: 'Kandla Port Tank Farm', city: 'Kutch', state: 'Gujarat', risk: 'Low', classification: 'Industrial / Port', type: 'Industrial', source: 'VIIRS', frp: 15.2, detections: 4, date: '01 May 2025', time: '16:40 UTC', status: 'Resolved', confidence: 66, distance: 1.8, lat: 23.00, lon: 70.21 },
+            { id: 'FIRMS-IND-2025-044', desc: 'Resolved: Glass furnace regular burn cycle', facility: 'Firozabad Glass Industrial Zone', city: 'Firozabad', state: 'Uttar Pradesh', risk: 'Low', classification: 'Industrial / Glass', type: 'Industrial', source: 'VIIRS', frp: 16.0, detections: 5, date: '01 May 2025', time: '12:15 UTC', status: 'Resolved', confidence: 67, distance: 1.5, lat: 27.15, lon: 78.39 },
+            { id: 'FIRMS-IND-2025-045', desc: 'Resolved: Brick kiln seasonal cool down', facility: 'Rohtak Kiln Cluster', city: 'Rohtak', state: 'Haryana', risk: 'Low', classification: 'Industrial / Kiln', type: 'Industrial', source: 'VIIRS', frp: 13.5, detections: 3, date: '01 May 2025', time: '08:50 UTC', status: 'Resolved', confidence: 64, distance: 3.1, lat: 28.89, lon: 76.60 },
+            { id: 'FIRMS-IND-2025-046', desc: 'Resolved: Copper smelting chimney checked', facility: 'Sterlite Copper Area', city: 'Thoothukudi', state: 'Tamil Nadu', risk: 'Medium', classification: 'Industrial / Smelter', type: 'Industrial', source: 'VIIRS', frp: 29.8, detections: 10, date: '30 Apr 2025', time: '19:30 UTC', status: 'Resolved', confidence: 81, distance: 1.4, lat: 8.76, lon: 78.13 },
+            { id: 'FIRMS-IND-2025-047', desc: 'Resolved: Refractory baking complete', facility: 'Belgaum Industrial Area', city: 'Belagavi', state: 'Karnataka', risk: 'Low', classification: 'Industrial / Manufacturing', type: 'Industrial', source: 'VIIRS', frp: 12.8, detections: 3, date: '30 Apr 2025', time: '14:20 UTC', status: 'Resolved', confidence: 63, distance: 2.2, lat: 15.84, lon: 74.49 },
+            { id: 'FIRMS-IND-2025-048', desc: 'Resolved: Alumina calcination cooling', facility: 'Damanjodi NALCO', city: 'Koraput', state: 'Odisha', risk: 'Medium', classification: 'Industrial / Mining', type: 'Industrial', source: 'VIIRS', frp: 31.2, detections: 12, date: '30 Apr 2025', time: '10:10 UTC', status: 'Resolved', confidence: 83, distance: 0.9, lat: 18.77, lon: 82.99 },
+            { id: 'FIRMS-IND-2025-049', desc: 'Resolved: Sugar mill bagasse boiler checked', facility: 'Kolhapur Sugar Mill', city: 'Kolhapur', state: 'Maharashtra', risk: 'Low', classification: 'Industrial / Agro', type: 'Industrial', source: 'VIIRS', frp: 14.5, detections: 4, date: '29 Apr 2025', time: '18:10 UTC', status: 'Resolved', confidence: 66, distance: 2.6, lat: 16.70, lon: 74.24 },
+            { id: 'FIRMS-IND-2025-050', desc: 'Resolved: Paper mill boiler exhaust clear', facility: 'Bhadravati Paper Mill', city: 'Shivamogga', state: 'Karnataka', risk: 'Low', classification: 'Industrial / Paper', type: 'Industrial', source: 'VIIRS', frp: 15.8, detections: 5, date: '29 Apr 2025', time: '14:00 UTC', status: 'Resolved', confidence: 68, distance: 1.9, lat: 13.84, lon: 75.70 }
+        ];
+
+        appState.alerts = [...generatedAlerts, ...additionalMockData];
     }
 
-    function showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-        const toast = document.createElement('div');
-        toast.className = `toast-item toast-${type}`;
-        toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'info'}" style="width:14px;height:14px;"></i><span>${message}</span>`;
-        container.appendChild(toast);
+    function renderAlertsView() {
+        if (!appState.alerts || appState.alerts.length === 0) {
+            initAlertsData();
+        }
+
+        // Calculate counts
+        const activeAlerts = appState.alerts.filter(a => a.status === 'New');
+        const ackAlerts = appState.alerts.filter(a => a.status === 'Acknowledged');
+        const resAlerts = appState.alerts.filter(a => a.status === 'Resolved');
+
+        const activeCount = activeAlerts.length;
+        const ackCount = ackAlerts.length;
+        const resCount = resAlerts.length;
+
+        const highCount = activeAlerts.filter(a => a.risk === 'High').length;
+        const medCount = activeAlerts.filter(a => a.risk === 'Medium').length;
+        const lowCount = activeAlerts.filter(a => a.risk === 'Low').length;
+
+        // Update KPI cards
+        const kpiActive = document.getElementById('kpiActiveAlertsVal');
+        const kpiHigh = document.getElementById('kpiHighRiskVal');
+        const kpiMed = document.getElementById('kpiMedRiskVal');
+        const kpiLow = document.getElementById('kpiLowRiskVal');
+        const badgeSide = document.getElementById('sidebarAlertsBadge');
+
+        if (kpiActive) kpiActive.textContent = activeCount;
+        if (kpiHigh) kpiHigh.textContent = highCount;
+        if (kpiMed) kpiMed.textContent = medCount;
+        if (kpiLow) kpiLow.textContent = lowCount;
+        if (badgeSide) badgeSide.textContent = activeCount;
+
+        // Update Status Tab counts
+        const cActiveTab = document.getElementById('countActiveTab');
+        const cAckTab = document.getElementById('countAckTab');
+        const cResTab = document.getElementById('countResolvedTab');
+
+        if (cActiveTab) cActiveTab.textContent = activeCount;
+        if (cAckTab) cAckTab.textContent = ackCount;
+        if (cResTab) cResTab.textContent = resCount;
+
+        // Filter alerts by status
+        let list = [];
+        if (appState.alertsFilters.status === 'acknowledged') {
+            list = ackAlerts;
+        } else if (appState.alertsFilters.status === 'resolved') {
+            list = resAlerts;
+        } else {
+            list = activeAlerts;
+        }
+
+        // Apply Risk Filter
+        if (appState.alertsFilters.risk !== 'ALL') {
+            list = list.filter(a => a.risk.toLowerCase() === appState.alertsFilters.risk.toLowerCase());
+        }
+
+        // Apply Search
+        if (appState.alertsFilters.search) {
+            const q = appState.alertsFilters.search.toLowerCase();
+            list = list.filter(a => 
+                a.id.toLowerCase().includes(q) ||
+                a.facility.toLowerCase().includes(q) ||
+                a.city.toLowerCase().includes(q) ||
+                a.state.toLowerCase().includes(q) ||
+                a.desc.toLowerCase().includes(q)
+            );
+        }
+
+        // Apply Dropdowns
+        if (appState.alertsFilters.type !== 'ALL') {
+            list = list.filter(a => a.type === appState.alertsFilters.type);
+        }
+        if (appState.alertsFilters.source !== 'ALL') {
+            list = list.filter(a => a.source === appState.alertsFilters.source);
+        }
+        if (appState.alertsFilters.state !== 'ALL') {
+            list = list.filter(a => a.state === appState.alertsFilters.state);
+        }
+
+        // Apply Sort
+        if (appState.alertsFilters.sort === 'frp') {
+            list.sort((a, b) => b.frp - a.frp);
+        } else if (appState.alertsFilters.sort === 'risk') {
+            const rMap = { 'High': 3, 'Medium': 2, 'Low': 1 };
+            list.sort((a, b) => (rMap[b.risk] || 0) - (rMap[a.risk] || 0));
+        } else {
+            list.sort((a, b) => b.id.localeCompare(a.id));
+        }
+
+        // Render Table Rows
+        const tbody = document.getElementById('alertsTableBody');
+        if (tbody) {
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 text-xs">No alerts match the selected criteria.</td></tr>`;
+            } else {
+                tbody.innerHTML = list.map(alert => {
+                    const isSelected = alert.id === appState.selectedAlertId ? 'selected' : '';
+                    let flareColor = '#ef4444';
+                    let riskPill = '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-700">High</span>';
+                    if (alert.risk === 'Medium') {
+                        flareColor = '#f59e0b';
+                        riskPill = '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">Medium</span>';
+                    } else if (alert.risk === 'Low') {
+                        flareColor = '#10b981';
+                        riskPill = '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">Low</span>';
+                    }
+
+                    let statusBadge = '<span class="alert-status-badge badge-status-new">New</span>';
+                    if (alert.status === 'Acknowledged') {
+                        statusBadge = '<span class="alert-status-badge badge-status-acknowledged">Acknowledged</span>';
+                    } else if (alert.status === 'Resolved') {
+                        statusBadge = '<span class="alert-status-badge badge-status-resolved">Resolved</span>';
+                    }
+
+                    return `
+                        <tr class="alert-table-row ${isSelected}" data-id="${alert.id}">
+                            <td class="w-8" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="alert-row-check rounded border-slate-300">
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-900 flex items-center justify-center relative">
+                                        <svg width="40" height="40" viewBox="0 0 40 40">
+                                            <rect width="40" height="40" fill="#11192e"/>
+                                            <circle cx="20" cy="20" r="14" fill="${flareColor}" opacity="0.3"/>
+                                            <circle cx="20" cy="20" r="7" fill="${flareColor}" opacity="0.85"/>
+                                            <circle cx="20" cy="20" r="2.5" fill="#ffffff"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-slate-800 text-[12px] font-mono">${alert.id}</div>
+                                        <div class="text-[10px] text-slate-400 truncate max-w-[180px]">${alert.desc}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-1 text-[12px] font-semibold text-slate-800">
+                                    <i data-lucide="map-pin" class="w-3 h-3 text-slate-400 shrink-0"></i>
+                                    <span>${alert.facility}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 ml-4">${alert.city}, ${alert.state}</div>
+                            </td>
+                            <td>${riskPill}</td>
+                            <td>
+                                <div class="text-[11px] font-semibold text-slate-700">FRP: ${alert.frp.toFixed(1)} MW</div>
+                                <div class="text-[10px] text-slate-400">Detections: ${alert.detections}</div>
+                            </td>
+                            <td>
+                                <div class="text-[11px] font-semibold text-slate-700">${alert.date}</div>
+                                <div class="text-[10px] text-slate-400">${alert.time}</div>
+                            </td>
+                            <td>${statusBadge}</td>
+                            <td class="w-8 text-right text-slate-400">
+                                <button class="p-1 hover:text-slate-600 rounded">
+                                    <i data-lucide="more-vertical" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Attach row click listeners
+                tbody.querySelectorAll('.alert-table-row').forEach(row => {
+                    row.addEventListener('click', () => {
+                        const id = row.getAttribute('data-id');
+                        selectAlert(id);
+                    });
+                });
+            }
+        }
+
+        // Update inspector with selected alert
+        const selectedAlert = appState.alerts.find(a => a.id === appState.selectedAlertId) || list[0] || appState.alerts[0];
+        if (selectedAlert) {
+            renderAlertInspector(selectedAlert);
+        }
+
         initLucideIcons();
+    }
+
+    function selectAlert(alertId) {
+        appState.selectedAlertId = alertId;
+        document.querySelectorAll('.alert-table-row').forEach(r => {
+            if (r.getAttribute('data-id') === alertId) r.classList.add('selected');
+            else r.classList.remove('selected');
+        });
+
+        const alert = appState.alerts.find(a => a.id === alertId);
+        if (alert) {
+            renderAlertInspector(alert);
+        }
+    }
+
+    function renderAlertInspector(alert) {
+        const idElem = document.getElementById('insAlertEventId');
+        const riskElem = document.getElementById('insAlertRiskBadge');
+        const classElem = document.getElementById('insAlertClassificationBadge');
+        const facElem = document.getElementById('insAlertFacility');
+        const locSub = document.getElementById('insAlertLocationSub');
+        const timeElem = document.getElementById('insAlertTime');
+
+        if (idElem) idElem.textContent = alert.id;
+        if (riskElem) {
+            riskElem.textContent = `${alert.risk} Risk`;
+            riskElem.className = `risk-badge ${alert.risk === 'High' ? 'high' : (alert.risk === 'Medium' ? 'medium' : 'low')}`;
+        }
+        if (classElem) classElem.textContent = alert.classification;
+        if (facElem) facElem.textContent = alert.facility;
+        if (locSub) locSub.textContent = `${alert.city}, ${alert.state} (${alert.distance} km)`;
+        if (timeElem) timeElem.textContent = `${alert.date}, ${alert.time}`;
+
+        const frpElem = document.getElementById('insAlertFrp');
+        const detElem = document.getElementById('insAlertDetections');
+        const confElem = document.getElementById('insAlertConfidence');
+        const distElem = document.getElementById('insAlertDistance');
+
+        if (frpElem) frpElem.textContent = `${alert.frp.toFixed(1)} MW`;
+        if (detElem) detElem.innerHTML = `${alert.detections} <span class="text-[10px] text-slate-400 font-normal">(30 days)</span>`;
+        if (confElem) confElem.textContent = `${alert.confidence || 94}%`;
+        if (distElem) distElem.textContent = `${alert.distance} km`;
+
+        // Reasons checklist
+        const reasonsElem = document.getElementById('insAlertReasons');
+        if (reasonsElem) {
+            const reasons = alert.reasons || [
+                { icon: 'factory', color: 'emerald', text: `Within ${Math.round(alert.distance * 1000)} m of industrial facility` },
+                { icon: 'flame', color: 'amber', text: `High temporal persistence (${alert.detections} detections in 30 days)` },
+                { icon: 'alert-triangle', color: 'red', text: 'Elevated FRP thermal signature' },
+                { icon: 'building-2', color: 'amber', text: 'Located in built-up / industrial area' }
+            ];
+
+            reasonsElem.innerHTML = reasons.map(r => `
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 text-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-${r.color}-500 shrink-0"></span>
+                    <span class="text-[11px] font-medium">${r.text}</span>
+                </div>
+            `).join('');
+        }
+
+        // Sub-map initialization & positioning
+        const mapContainer = document.getElementById('alertInspectorMap');
+        if (mapContainer && window.L) {
+            if (!alertInspectorMap) {
+                alertInspectorMap = L.map('alertInspectorMap', {
+                    center: [alert.lat, alert.lon],
+                    zoom: 15,
+                    zoomControl: false,
+                    attributionControl: false
+                });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    subdomains: ['a', 'b', 'c'],
+                    maxZoom: 19
+                }).addTo(alertInspectorMap);
+            } else {
+                alertInspectorMap.setView([alert.lat, alert.lon], 15);
+                setTimeout(() => alertInspectorMap.invalidateSize(), 100);
+            }
+
+            // Stick pulsing marker to exact coordinates on the alert sub-map
+            if (!alertInspectorMarkerLayer) {
+                alertInspectorMarkerLayer = L.layerGroup().addTo(alertInspectorMap);
+            }
+            alertInspectorMarkerLayer.clearLayers();
+
+            let alertColor = '#10b981';
+            if (alert.risk === 'High') alertColor = '#ef4444';
+            else if (alert.risk === 'Medium') alertColor = '#f97316';
+
+            const alertIconHtml = `
+                <div class="pin-marker-container pin-selected" style="width:20px; height:20px;">
+                    <div class="pin-focal-beacon" style="border-color:${alertColor}; box-shadow:0 0 14px ${alertColor};"></div>
+                    <div style="width:20px; height:20px; border-radius:50%; background:${alertColor}; border:2.5px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>
+                </div>
+            `;
+            const alertCustomIcon = L.divIcon({
+                html: alertIconHtml,
+                className: 'custom-risk-dot',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const alertMarker = L.marker([alert.lat, alert.lon], { icon: alertCustomIcon });
+            alertMarker.bindTooltip(`
+                <div style="font-weight:700; color:${alertColor}; font-size:11px;">${alert.risk} Risk &bull; ${alert.id}</div>
+                <div style="font-size:11px; color:#334155; margin-top:2px;">${alert.facility}, ${alert.city}</div>
+                <div style="font-size:10px; color:#64748b;">${alert.frp} MW FRP &bull; ${alert.time}</div>
+            `, { direction: 'top', offset: [0, -10] });
+
+            alertInspectorMarkerLayer.addLayer(alertMarker);
+        }
+
+        initLucideIcons();
+    }
+
+    function acknowledgeAlert(alertId) {
+        const alert = appState.alerts.find(a => a.id === alertId);
+        if (alert) {
+            alert.status = 'Acknowledged';
+            showToast(`Alert ${alert.id} marked as Acknowledged`, 'success');
+            renderAlertsView();
+        }
+    }
+
+    function resolveAlert(alertId) {
+        const alert = appState.alerts.find(a => a.id === alertId);
+        if (alert) {
+            alert.status = 'Resolved';
+            showToast(`Alert ${alert.id} marked as Resolved`, 'success');
+            renderAlertsView();
+        }
+    }
+
+    function initAlertsEventListeners() {
+        // Status filter tabs (Active, Acknowledged, Resolved)
+        document.querySelectorAll('.alerts-status-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.alerts-status-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                appState.alertsFilters.status = tab.getAttribute('data-status');
+                renderAlertsView();
+            });
+        });
+
+        // Risk filter pills in topbar
+        document.querySelectorAll('#alertsRiskFilterGroup .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#alertsRiskFilterGroup .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                appState.alertsFilters.risk = pill.getAttribute('data-risk');
+                renderAlertsView();
+            });
+        });
+
+        // Search input
+        document.getElementById('alertsSearchInput')?.addEventListener('input', (e) => {
+            appState.alertsFilters.search = e.target.value.trim();
+            renderAlertsView();
+        });
+
+        // Dropdown filters
+        document.getElementById('selAlertRiskLevel')?.addEventListener('change', (e) => {
+            appState.alertsFilters.risk = e.target.value;
+            renderAlertsView();
+        });
+        document.getElementById('selAlertType')?.addEventListener('change', (e) => {
+            appState.alertsFilters.type = e.target.value;
+            renderAlertsView();
+        });
+        document.getElementById('selSourceType')?.addEventListener('change', (e) => {
+            appState.alertsFilters.source = e.target.value;
+            renderAlertsView();
+        });
+        document.getElementById('selState')?.addEventListener('change', (e) => {
+            appState.alertsFilters.state = e.target.value;
+            renderAlertsView();
+        });
+
+        // Sort toggle
+        document.getElementById('alertsSortBtn')?.addEventListener('click', () => {
+            const sorts = [
+                { key: 'latest', label: 'Latest' },
+                { key: 'risk', label: 'Risk' },
+                { key: 'frp', label: 'FRP' }
+            ];
+            const currIdx = sorts.findIndex(s => s.key === appState.alertsFilters.sort);
+            const next = sorts[(currIdx + 1) % sorts.length];
+            appState.alertsFilters.sort = next.key;
+            const lbl = document.getElementById('alertsSortLabel');
+            if (lbl) lbl.textContent = next.label;
+            renderAlertsView();
+            showToast(`Alerts sorted by ${next.label}`, 'info');
+        });
+
+        // Acknowledge & Resolve action buttons
+        document.getElementById('btnAcknowledgeAlert')?.addEventListener('click', () => {
+            if (appState.selectedAlertId) {
+                acknowledgeAlert(appState.selectedAlertId);
+            }
+        });
+        document.getElementById('btnResolveAlert')?.addEventListener('click', () => {
+            if (appState.selectedAlertId) {
+                resolveAlert(appState.selectedAlertId);
+            }
+        });
+
+        // Select All Checkbox
+        document.getElementById('selectAllAlerts')?.addEventListener('change', (e) => {
+            document.querySelectorAll('.alert-row-check').forEach(chk => {
+                chk.checked = e.target.checked;
+            });
+        });
+
+        // Create Alert Rule Modal
+        const modal = document.getElementById('createAlertModal');
+        document.getElementById('btnOpenCreateAlert')?.addEventListener('click', () => {
+            modal?.classList.remove('hidden');
+        });
+        document.getElementById('btnCloseAlertModal')?.addEventListener('click', () => {
+            modal?.classList.add('hidden');
+        });
+        document.getElementById('btnCancelAlertModal')?.addEventListener('click', () => {
+            modal?.classList.add('hidden');
+        });
+
+        document.getElementById('createAlertForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('alertRuleName')?.value;
+            modal?.classList.add('hidden');
+            showToast(`Alert rule "${name}" created successfully!`, 'success');
+        });
+    }
+
+    // ----------------------------------------------------------------------
+    // 14. TOAST NOTIFICATION UTILITY
+    // ----------------------------------------------------------------------
+    function showToast(message, type = 'info') {
+        const existing = document.getElementById('toastNotification');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'toastNotification';
+        toast.className = `fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl text-xs font-semibold text-white transition-all transform duration-200 ${type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-600' : 'bg-slate-900')}`;
+        toast.innerHTML = `<span>${message}</span>`;
+        document.body.appendChild(toast);
+
         setTimeout(() => {
             toast.style.opacity = '0';
-            toast.style.transition = 'opacity 0.2s ease';
-            setTimeout(() => toast.remove(), 200);
-        }, 3000);
+            setTimeout(() => toast.remove(), 300);
+        }, 3200);
     }
 
 })();
